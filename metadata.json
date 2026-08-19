@@ -1,0 +1,6 @@
+{
+  "name": "Star e-Office",
+  "description": "Platform tata kelola surat, administrasi, dan alur kerja perkantoran modern terpadu",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
