@@ -3106,7 +3106,7 @@ async function handlePostgresMutation(name: string, args: Record<string, unknown
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   // Cloud Run / Reverse Proxy Configuration
   app.set("trust proxy", 1);
