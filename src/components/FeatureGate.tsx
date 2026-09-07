@@ -43,7 +43,7 @@ export default function FeatureGate({ menuKey, children }: FeatureGateProps) {
     );
   }
 
-  if (result.blocked) {
+  if (result?.blocked) {
     return (
       <div className="mx-auto w-full max-w-2xl p-6">
         <Empty>
@@ -53,7 +53,7 @@ export default function FeatureGate({ menuKey, children }: FeatureGateProps) {
             </EmptyMedia>
             <EmptyTitle>Fitur Tidak Tersedia</EmptyTitle>
             <EmptyDescription>
-              {result.upgradeMessage ?? "Fitur ini tidak termasuk dalam paket keanggotaan Anda."}
+              {result?.upgradeMessage ?? "Fitur ini tidak termasuk dalam paket keanggotaan Anda."}
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>

@@ -1,0 +1,313 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Font surat yang dibundel bersama aplikasi (same-origin di /public/fonts).
+   Dipakai oleh dokumen surat di SEMUA perangkat agar tampilan pratinjau, editor,
+   dan PDF konsisten (PC = Android). Nama keluarga khusus "Noto Serif Letter"
+   supaya tidak bentrok dengan Noto Serif dari Google Fonts. */
+@font-face {
+  font-family: "Noto Serif Letter";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/noto-serif-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Noto Serif Letter";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/noto-serif-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Noto Serif Letter";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/noto-serif-400-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Noto Serif Letter";
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/noto-serif-700-italic.woff2") format("woff2");
+}
+
+@theme inline {
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  --font-serif:
+    "Noto Serif", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(0.98 0.005 240);
+  --foreground: oklch(0.15 0.02 250);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.02 250);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0.02 250);
+  --primary: oklch(0.42 0.12 250);
+  --primary-foreground: oklch(0.98 0.005 240);
+  --secondary: oklch(0.94 0.015 240);
+  --secondary-foreground: oklch(0.25 0.04 250);
+  --muted: oklch(0.94 0.01 240);
+  --muted-foreground: oklch(0.50 0.03 250);
+  --accent: oklch(0.55 0.18 195);
+  --accent-foreground: oklch(0.98 0.005 240);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.90 0.015 240);
+  --input: oklch(0.90 0.015 240);
+  --ring: oklch(0.42 0.12 250);
+  --chart-1: oklch(0.42 0.12 250);
+  --chart-2: oklch(0.55 0.18 195);
+  --chart-3: oklch(0.65 0.15 160);
+  --chart-4: oklch(0.70 0.12 80);
+  --chart-5: oklch(0.60 0.20 310);
+  --sidebar: rgba(239, 246, 248);
+  --sidebar-foreground: oklch(0.25 0.04 250);
+  --sidebar-primary: oklch(0.42 0.12 250);
+  --sidebar-primary-foreground: oklch(0.98 0.005 240);
+  --sidebar-accent: oklch(0.82 0.06 250);
+  --sidebar-accent-foreground: oklch(0.20 0.04 250);
+  --sidebar-border: oklch(0.82 0.05 250);
+  --sidebar-ring: oklch(0.55 0.12 250);
+}
+
+.dark {
+  --background: oklch(0.13 0.02 250);
+  --foreground: oklch(0.92 0.01 240);
+  --card: oklch(0.18 0.025 250);
+  --card-foreground: oklch(0.92 0.01 240);
+  --popover: oklch(0.18 0.025 250);
+  --popover-foreground: oklch(0.92 0.01 240);
+  --primary: oklch(0.60 0.16 240);
+  --primary-foreground: oklch(0.98 0.005 240);
+  --secondary: oklch(0.22 0.03 250);
+  --secondary-foreground: oklch(0.92 0.01 240);
+  --muted: oklch(0.22 0.03 250);
+  --muted-foreground: oklch(0.62 0.04 240);
+  --accent: oklch(0.55 0.18 195);
+  --accent-foreground: oklch(0.98 0.005 240);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(0.26 0.03 250);
+  --input: oklch(0.26 0.03 250);
+  --ring: oklch(0.60 0.16 240);
+  --chart-1: oklch(0.60 0.16 240);
+  --chart-2: oklch(0.55 0.18 195);
+  --chart-3: oklch(0.65 0.15 160);
+  --chart-4: oklch(0.70 0.12 80);
+  --chart-5: oklch(0.60 0.20 310);
+  --sidebar: rgba(239, 246, 248);
+  --sidebar-foreground: oklch(0.25 0.04 250);
+  --sidebar-primary: oklch(0.42 0.12 250);
+  --sidebar-primary-foreground: oklch(0.98 0.005 240);
+  --sidebar-accent: oklch(0.78 0.06 250);
+  --sidebar-accent-foreground: oklch(0.20 0.04 250);
+  --sidebar-border: oklch(0.78 0.05 250);
+  --sidebar-ring: oklch(0.55 0.12 250);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Always-visible scrollbar (kept outside @layer so it always applies).
+   IMPORTANT: do NOT set `scrollbar-width` here. When `scrollbar-width` is set,
+   Chrome ignores the ::-webkit-scrollbar rules and falls back to a thin
+   auto-hiding overlay bar. Omitting it lets the webkit pseudo-elements render a
+   permanently visible track + thumb. */
+.always-scrollbar {
+  scrollbar-gutter: stable;
+}
+.always-scrollbar::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+.always-scrollbar::-webkit-scrollbar-track {
+  background: var(--muted);
+  border-radius: 9999px;
+}
+.always-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--muted-foreground);
+  border-radius: 9999px;
+  border: 3px solid var(--muted);
+  min-height: 32px;
+  min-width: 32px;
+}
+
+/* BoD Dashboard — print/PDF styles */
+@media print {
+  /* Hide all navigation and app chrome */
+  nav, aside, header, .print\:hidden { display: none !important; }
+  /* Show print-only elements */
+  .print\:block { display: block !important; }
+  /* Reset background for readability */
+  body, html { background: white !important; color: black !important; }
+  /* Remove card shadows */
+  .shadow, .shadow-md, .shadow-sm { box-shadow: none !important; }
+  /* Ensure cards are readable */
+  .border { border-color: #d1d5db !important; }
+  /* Page layout – tighter margins for content-dense A4 */
+  /* Avoid page breaks inside cards */
+  .grid > * { break-inside: avoid; }
+
+  /* ── Executive Summary: satu halaman A4 (margin tipis) ──────────── */
+  @page { margin: 0.7cm; size: A4; }
+
+  .exec-summary-root {
+    font-size: 7.5pt !important;
+    line-height: 1.2 !important;
+  }
+
+  /* Compress ALL gaps & spacing */
+  .exec-summary-root .space-y-6 > * + * { margin-top: 4pt !important; }
+  .exec-summary-root .space-y-4 > * + * { margin-top: 3pt !important; }
+  .exec-summary-root .space-y-3 > * + * { margin-top: 3pt !important; }
+  .exec-summary-root .space-y-2 > * + * { margin-top: 2pt !important; }
+  .exec-summary-root .space-y-1 > * + * { margin-top: 1pt !important; }
+
+  /* Compact all padding */
+  .exec-summary-root .p-6    { padding: 4pt !important; }
+  .exec-summary-root .p-5    { padding: 4pt !important; }
+  .exec-summary-root .p-4    { padding: 4pt !important; }
+  .exec-summary-root .p-3    { padding: 3pt !important; }
+  .exec-summary-root .p-2    { padding: 2pt !important; }
+  .exec-summary-root .p-1\.5 { padding: 1.5pt !important; }
+  .exec-summary-root .px-3   { padding-left: 3pt !important; padding-right: 3pt !important; }
+  .exec-summary-root .py-2   { padding-top: 2pt !important; padding-bottom: 2pt !important; }
+  .exec-summary-root .py-1   { padding-top: 1pt !important; padding-bottom: 1pt !important; }
+  .exec-summary-root .pb-2   { padding-bottom: 2pt !important; }
+  .exec-summary-root .pt-0   { padding-top: 0 !important; }
+
+  /* Compact gaps */
+  .exec-summary-root .gap-4   { gap: 4pt !important; }
+  .exec-summary-root .gap-3   { gap: 3pt !important; }
+  .exec-summary-root .gap-2   { gap: 2pt !important; }
+  .exec-summary-root .gap-1\.5{ gap: 1.5pt !important; }
+  .exec-summary-root .gap-1   { gap: 1pt !important; }
+
+  /* Compact margins */
+  .exec-summary-root .mb-4 { margin-bottom: 4pt !important; }
+  .exec-summary-root .mb-3 { margin-bottom: 3pt !important; }
+  .exec-summary-root .mb-2 { margin-bottom: 2pt !important; }
+  .exec-summary-root .mb-1 { margin-bottom: 1pt !important; }
+
+  /* Suppress separators & animations */
+  .exec-summary-root hr { display: none !important; }
+  .exec-summary-root .animate-pulse { animation: none !important; }
+
+  /* Domain scorecard grid: 5 kolom penuh di print */
+  .exec-domain-grid {
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 3pt !important;
+  }
+
+  /* Finance KPI grid: 4 kolom */
+  .exec-finance-grid {
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 3pt !important;
+  }
+
+  /* Escalation items: 2 kolom */
+  .exec-escalation-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 3pt !important;
+  }
+
+  /* Typography scale — sangat kecil untuk muat A4 */
+  .exec-summary-root .text-2xl  { font-size: 11pt !important; }
+  .exec-summary-root .text-xl   { font-size: 10pt !important; }
+  .exec-summary-root .text-lg   { font-size: 9pt !important; }
+  .exec-summary-root .text-base { font-size: 8pt !important; }
+  .exec-summary-root .text-sm   { font-size: 7pt !important; }
+  .exec-summary-root .text-xs   { font-size: 6.5pt !important; }
+
+  /* KPI summary table – sangat kompak */
+  .exec-summary-root table {
+    font-size: 6.5pt !important;
+    border-collapse: collapse !important;
+  }
+  .exec-summary-root table th { padding: 1.5pt 3pt !important; }
+  .exec-summary-root table td { padding: 1pt 3pt !important; line-height: 1.15 !important; }
+
+  /* Kurangi tinggi progress bar */
+  .exec-summary-root .h-1\.5 { height: 2px !important; }
+  .exec-summary-root .h-1   { height: 2px !important; }
+
+  /* Kurangi tinggi minimum baris */
+  .exec-summary-root .min-h-\[2\.5rem\] { min-height: 0 !important; }
+
+  /* Sembunyikan elemen non-esensial saat cetak */
+  .exec-summary-root .print-hide { display: none !important; }
+
+  /* Sembunyikan chat widget / floating buttons saat cetak */
+  [class*="starfa"], [id*="starfa"],
+  [class*="chat-widget"], [class*="chatWidget"],
+  [class*="floating"], [class*="fab"],
+  [data-starfa], [aria-label*="Tanya"],
+  button[class*="fixed"][class*="bottom"],
+  div[class*="fixed"][class*="bottom-"] {
+    display: none !important;
+  }
+}

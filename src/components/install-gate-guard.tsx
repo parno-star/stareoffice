@@ -3,12 +3,18 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useInstallPrompt } from "@/hooks/use-install-prompt.ts";
 
 /**
- * Wraps the app root to redirect ALL users to the install gate page
- * unless they are running in standalone mode (PWA installed).
+ * Wraps the app root to redirect users to the install gate page
+ * unless they are running in standalone mode (PWA installed), in preview/iframe, or have marked install.
  *
- * Bypassed routes: /install, /auth/callback, /verifikasi-surat
+ * Bypassed routes: /install, /auth/callback, /verifikasi-surat, /presentation, /download-pricing
  */
-const BYPASS_PATHS = ["/install", "/auth/callback", "/verifikasi-surat"];
+const BYPASS_PATHS = [
+  "/install",
+  "/auth/callback",
+  "/verifikasi-surat",
+  "/presentation",
+  "/download-pricing",
+];
 
 const INSTALL_KEY = "star-eoffice-installed";
 
@@ -33,5 +39,22 @@ export default function InstallGateGuard({
 }: {
   children: ReactNode;
 }) {
-  return <>{children}</>;
+  const location = useLocation();
+  const { isStandalone } = useInstallPrompt();
+
+  // Always allow bypass paths
+  const isBypassed = BYPASS_PATHS.some((p) =>
+    location.pathname.startsWith(p),
+  );
+  if (isBypassed) return <>{children}</>;
+
+  // Skip install gate in development mode or inside iframe previews
+  const isIframe = typeof window !== "undefined" && window.self !== window.top;
+  if (import.meta.env.DEV || isIframe) return <>{children}</>;
+
+  // Allow access if app is running in standalone mode or install was confirmed
+  if (isStandalone || isInstallComplete()) return <>{children}</>;
+
+  // Otherwise redirect to install page
+  return <Navigate to="/install" replace />;
 }

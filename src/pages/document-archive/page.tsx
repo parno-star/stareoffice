@@ -1,67 +1,118 @@
 import { useState } from "react";
-import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
+import { useNavigate } from "react-router-dom";
+import { usePaginatedQuery, useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
 import type { Id, Doc } from "@/convex/_generated/dataModel.d.ts";
-import { Input } from "@/components/ui/input.tsx";
+import { Authenticated } from "convex/react";
 import { Button } from "@/components/ui/button.tsx";
+import { Input } from "@/components/ui/input.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select.tsx";
+  Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription,
+} from "@/components/ui/empty.tsx";
 import {
-  Archive,
-  Search,
-  Download,
-  Eye,
-  ShieldCheck,
-  Clock,
-  Send,
-  Inbox,
-  FileText,
-  ArrowLeftRight,
-  User,
-  Filter,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select.tsx";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs.tsx";
+import {
+  Archive, Search, Download, Send, ArrowLeftRight, FileText, Inbox, Eye,
+  ShieldCheck, History, Lock, Info,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils.ts";
-import { LetterTypeBadge, LetterStatusBadge } from "@/components/LetterStatusBadge.tsx";
-import LetterDetailPanel from "@/components/LetterDetailPanel.tsx";
+import { LetterTypeBadge, LetterStatusBadge } from "@/pages/letters/_components/LetterStatusBadge.tsx";
+import { DataAccessBanner } from "@/components/DataAccessBanner.tsx";
+import { ROLE_LABELS, isAdminRole, isRole } from "@/convex/roles.ts";
 
 type ArchivedLetter = Doc<"letters"> & { archiveUrl: string | null };
 
-const TYPE_FILTERS = [
+const TYPE_FILTERS: { value: string; label: string }[] = [
   { value: "all", label: "Semua Jenis" },
-  { value: "masuk", label: "Surat Masuk" },
   { value: "keluar", label: "Surat Keluar" },
-  { value: "memo", label: "Nota Dinas" },
-  { value: "internal", label: "Surat Internal" },
+  { value: "internal", label: "Internal" },
+  { value: "memo", label: "Nota" },
+  { value: "masuk", label: "Surat Masuk" },
 ];
 
-function getTypeIcon(type: string) {
-  if (type === "masuk") return <Inbox className="size-4 text-emerald-600" />;
+function typeIcon(type: string) {
+  if (type === "masuk") return <Inbox className="size-4 text-teal-600" />;
   if (type === "keluar") return <Send className="size-4 text-blue-600" />;
-  if (type === "memo" || type === "nota") return <FileText className="size-4 text-violet-600" />;
-  return <ArrowLeftRight className="size-4 text-amber-600" />;
+  if (type === "memo") return <FileText className="size-4 text-violet-600" />;
+  return <ArrowLeftRight className="size-4 text-orange-600" />;
 }
 
 export default function DocumentArchivePage() {
-  const [activeSubTab, setActiveSubTab] = useState<"arsip" | "audit">("arsip");
+  return (
+    <Authenticated>
+      <DocumentArchiveContent />
+    </Authenticated>
+  );
+}
+
+function DocumentArchiveContent() {
+  const currentUser = useQuery(api.users.getCurrentUser, {});
+  const canSeeAudit = isAdminRole(currentUser?.role ?? null);
+
+  return (
+    <div className="mx-auto flex h-full w-full max-w-5xl flex-col p-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center gap-3">
+        <div className="flex size-10 items-center justify-center rounded-lg bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300">
+          <Archive className="size-5" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="text-lg font-bold">Arsip Dokumen</h1>
+          <p className="text-xs text-muted-foreground">
+            Pusat arsip surat final beserta salinan PDF permanen dan jejak audit akses.
+          </p>
+        </div>
+      </div>
+
+      <DataAccessBanner category="letters" className="mb-3" />
+
+      {/* GCG note */}
+      <div className="mb-4 flex items-start gap-2 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+        <ShieldCheck className="mt-0.5 size-4 shrink-0" />
+        <p className="text-xs">
+          Arsip ini bersifat <span className="font-semibold">baca-saja (read-only)</span> demi menjaga
+          integritas dokumen (GCG). Isi surat final tidak dapat diubah. Setiap akses buka dan unduh
+          arsip tercatat pada jejak audit.
+        </p>
+      </div>
+
+      {canSeeAudit ? (
+        <Tabs defaultValue="archive" className="flex flex-1 flex-col overflow-hidden">
+          <TabsList className="mb-3 w-full justify-start sm:w-auto">
+            <TabsTrigger value="archive" className="cursor-pointer gap-1.5">
+              <Archive className="size-4" /> Arsip Surat
+            </TabsTrigger>
+            <TabsTrigger value="audit" className="cursor-pointer gap-1.5">
+              <History className="size-4" /> Jejak Audit
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="archive" className="flex-1 overflow-hidden">
+            <ArchiveList />
+          </TabsContent>
+          <TabsContent value="audit" className="flex-1 overflow-hidden">
+            <AuditTrail />
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <ArchiveList />
+      )}
+    </div>
+  );
+}
+
+function ArchiveList() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [selectedLetterId, setSelectedLetterId] = useState<Id<"letters"> | null>(null);
-
-  // Convex mutations & queries
   const logAccess = useMutation(api.letters.logArchiveAccess);
 
-  // Paginated archived letters
-  const { results: archivedLetters, status: archiveStatus, loadMore } = usePaginatedQuery(
+  const { results, status, loadMore } = usePaginatedQuery(
     api.letters.listArchivedLetters,
     {
       type: typeFilter === "all" ? undefined : typeFilter,
@@ -70,315 +121,247 @@ export default function DocumentArchivePage() {
     { initialNumItems: 30 },
   );
 
-  // Paginated archive audit logs
-  const { results: auditLogs, status: auditStatus } = usePaginatedQuery(
-    api.letters.listArchiveAudit,
-    {},
-    { initialNumItems: 30 },
-  );
-
-  const handleOpenDetail = (letterId: Id<"letters">) => {
-    logAccess({ letterId, action: "view" }).catch(() => {});
-    setSelectedLetterId(letterId);
+  const openDetail = (letter: ArchivedLetter) => {
+    void logAccess({ letterId: letter._id, action: "view" });
+    navigate(`/letters?letterId=${letter._id}`);
   };
 
-  const handleDownload = (letter: ArchivedLetter) => {
+  const download = (letter: ArchivedLetter) => {
     if (!letter.archiveUrl) {
-      toast.error("Salinan PDF arsip belum tersedia untuk dokumen ini.");
+      toast.error("Arsip PDF belum tersedia untuk surat ini.");
       return;
     }
-    logAccess({ letterId: letter._id, action: "download" }).catch(() => {});
+    void logAccess({ letterId: letter._id, action: "download" });
     const a = document.createElement("a");
     a.href = letter.archiveUrl;
-    a.download = letter.archivePdfName ?? `${letter.subject || "Surat"}.pdf`;
+    a.download = letter.archivePdfName ?? `${letter.subject}.pdf`;
     a.target = "_blank";
     a.rel = "noopener";
     a.click();
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-5 min-h-screen pb-24">
-      {/* Top Header */}
-      <div className="flex items-start gap-3 sm:gap-4">
-        <div className="size-11 sm:size-12 rounded-2xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-          <Archive className="size-6" />
+    <div className="flex h-full flex-col">
+      {/* Filters */}
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="pl-9"
+            placeholder="Cari perihal / no. surat / no. agenda..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
-        <div className="space-y-0.5">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-            Arsip Dokumen
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground leading-snug">
-            Pusat arsip surat final beserta salinan PDF permanen dan jejak audit akses.
-          </p>
-        </div>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-full sm:w-44 cursor-pointer">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {TYPE_FILTERS.map((t) => (
+              <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Read-Only GCG Info Notice Banner */}
-      <div className="rounded-2xl bg-[#e6f7f0] dark:bg-emerald-950/30 border border-[#b3eacc] dark:border-emerald-800/60 p-3.5 sm:p-4 text-emerald-900 dark:text-emerald-200 text-xs sm:text-sm flex items-start gap-3 shadow-2xs">
-        <ShieldCheck className="size-5 text-[#059669] dark:text-emerald-400 shrink-0 mt-0.5" />
-        <p className="leading-relaxed">
-          Arsip ini bersifat <strong className="font-semibold">baca-saja (read-only)</strong> demi menjaga integritas dokumen (GCG). Isi surat final tidak dapat diubah. Setiap akses buka dan unduh arsip tercatat pada jejak audit.
+      {/* List */}
+      <div className="flex-1 overflow-y-auto">
+        {results === undefined ? (
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full" />
+            ))}
+          </div>
+        ) : results.length === 0 ? (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Archive />
+              </EmptyMedia>
+              <EmptyTitle>Belum ada surat di arsip</EmptyTitle>
+              <EmptyDescription>
+                Surat yang sudah dikirim atau difinalkan akan muncul di sini beserta salinan PDF-nya.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <div className="space-y-2">
+            {results.map((letter: ArchivedLetter) => (
+              <div
+                key={letter._id}
+                className="flex items-start gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-accent/40"
+              >
+                <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                  {typeIcon(letter.type)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex items-start justify-between gap-2">
+                    <p className="line-clamp-1 text-sm font-medium">{letter.subject}</p>
+                    <span className="shrink-0 text-[11px] text-muted-foreground">
+                      {format(new Date(letter.letterDate), "d MMM yyyy", { locale: localeId })}
+                    </span>
+                  </div>
+                  <p className="line-clamp-1 text-xs text-muted-foreground">
+                    {letter.type === "masuk" ? `Dari: ${letter.fromName}` : `Kepada: ${letter.toName}`}
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                    <LetterTypeBadge type={letter.type} />
+                    <LetterStatusBadge status={letter.status} />
+                    <Badge variant="outline" className="gap-1 text-[10px] text-muted-foreground">
+                      <Lock className="size-2.5" /> Terkunci
+                    </Badge>
+                    {letter.letterNumber && (
+                      <Badge variant="outline" className="text-[10px]">{letter.letterNumber}</Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="flex shrink-0 flex-col gap-1.5 sm:flex-row">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 cursor-pointer"
+                    onClick={() => openDetail(letter)}
+                    title="Lihat detail surat"
+                  >
+                    <Eye className="size-4" />
+                    <span className="hidden sm:inline">Detail</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-8 cursor-pointer"
+                    disabled={!letter.archiveUrl}
+                    onClick={() => download(letter)}
+                    title="Unduh Arsip PDF"
+                  >
+                    <Download className="size-4" />
+                    <span className="hidden sm:inline">PDF</span>
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {status === "CanLoadMore" && (
+              <div className="pt-1">
+                <Button
+                  variant="ghost"
+                  className="w-full cursor-pointer"
+                  size="sm"
+                  onClick={() => loadMore(30)}
+                >
+                  Muat lebih banyak
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+type AuditRow = Doc<"letterArchiveAudit"> & {
+  actorName: string | null;
+  actorRole: string | null;
+};
+
+function roleLabel(role: string | null): string | null {
+  if (!role) return null;
+  return isRole(role) ? ROLE_LABELS[role] : role;
+}
+
+function AuditTrail() {
+  const { results, status, loadMore } = usePaginatedQuery(
+    api.letters.listArchiveAudit,
+    {},
+    { initialNumItems: 40 },
+  );
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="mb-3 flex items-start gap-2 rounded-lg border bg-muted/40 p-3 text-muted-foreground">
+        <Info className="mt-0.5 size-4 shrink-0" />
+        <p className="text-xs">
+          Catatan akses arsip: siapa yang membuka atau mengunduh salinan PDF surat final, dan kapan.
+          Digunakan untuk kebutuhan audit dan akuntabilitas (GCG). Catatan tidak dapat diubah.
         </p>
       </div>
 
-      {/* Sub-Navigation Tabs Switcher */}
-      <div className="bg-[#e8f0f8] dark:bg-slate-800/80 p-1 rounded-2xl flex gap-1">
-        <button
-          type="button"
-          onClick={() => setActiveSubTab("arsip")}
-          className={cn(
-            "flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer",
-            activeSubTab === "arsip"
-              ? "bg-white dark:bg-slate-900 text-foreground shadow-xs"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <Archive className="size-4" />
-          <span>Arsip Surat</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveSubTab("audit")}
-          className={cn(
-            "flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer",
-            activeSubTab === "audit"
-              ? "bg-white dark:bg-slate-900 text-foreground shadow-xs"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <Clock className="size-4" />
-          <span>Jejak Audit</span>
-        </button>
-      </div>
-
-      {/* TAB 1: ARSIP SURAT */}
-      {activeSubTab === "arsip" && (
-        <div className="space-y-4">
-          {/* Search & Select Filters */}
-          <div className="flex flex-col sm:flex-row gap-2.5">
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-              <Input
-                placeholder="Cari perihal / no. surat / no. agenda..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 h-11 text-xs sm:text-sm rounded-xl bg-card border-border/80 shadow-2xs"
-              />
-            </div>
-
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-52 h-11 rounded-xl bg-card border-border/80 text-xs sm:text-sm shadow-2xs">
-                <SelectValue placeholder="Semua Jenis" />
-              </SelectTrigger>
-              <SelectContent>
-                {TYPE_FILTERS.map((tf) => (
-                  <SelectItem key={tf.value} value={tf.value} className="text-xs sm:text-sm">
-                    {tf.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <div className="flex-1 overflow-y-auto">
+        {results === undefined ? (
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
           </div>
-
-          {/* Archived Letters Content / Empty State */}
-          {archivedLetters === undefined ? (
-            <div className="space-y-3">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-20 w-full rounded-2xl" />
-              ))}
-            </div>
-          ) : archivedLetters.length === 0 ? (
-            /* Empty State Matching Screenshot */
-            <div className="py-16 sm:py-20 text-center flex flex-col items-center justify-center space-y-4 rounded-2xl bg-card border border-border/50 shadow-2xs px-4">
-              <div className="size-14 rounded-2xl bg-[#e8f0f8] dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center">
-                <Archive className="size-7" />
-              </div>
-
-              <div className="space-y-1.5 max-w-md">
-                <h3 className="text-lg font-bold text-foreground">
-                  Belum ada surat di arsip
-                </h3>
-                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  Surat yang sudah dikirim atau difinalkan akan muncul di sini beserta salinan PDF-nya.
-                </p>
-              </div>
-            </div>
-          ) : (
-            /* Archived Letters List */
-            <div className="space-y-2.5">
-              {archivedLetters.map((letter: ArchivedLetter) => (
+        ) : results.length === 0 ? (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <History />
+              </EmptyMedia>
+              <EmptyTitle>Belum ada aktivitas akses arsip</EmptyTitle>
+              <EmptyDescription>
+                Setiap kali seseorang membuka atau mengunduh arsip dokumen, catatannya akan muncul di sini.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <div className="space-y-2">
+            {results.map((row: AuditRow) => {
+              const isDownload = row.action === "download";
+              return (
                 <div
-                  key={letter._id}
-                  className="bg-card border border-border/70 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs hover:border-primary/40 transition-colors"
+                  key={row._id}
+                  className="flex items-start gap-3 rounded-lg border bg-card p-3"
                 >
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="size-10 rounded-xl bg-muted/60 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
-                      {getTypeIcon(letter.type)}
-                    </div>
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold text-sm text-foreground truncate">
-                          {letter.subject}
-                        </span>
-                        {letter.letterNumber && (
-                          <Badge variant="outline" className="text-[10px] rounded-md font-mono">
-                            {letter.letterNumber}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground line-clamp-1">
-                        {letter.type === "masuk"
-                          ? `Dari: ${letter.fromName || letter.senderName || "-"}`
-                          : `Kepada: ${letter.toName || letter.recipientName || "-"}`}
-                      </p>
-                      <div className="flex items-center gap-2 text-[11px] text-muted-foreground pt-0.5">
-                        <LetterTypeBadge type={letter.type} />
-                        <span>•</span>
-                        <span>
-                          {letter.letterDate
-                            ? format(new Date(letter.letterDate), "dd MMMM yyyy", { locale: localeId })
-                            : "-"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-0 border-border/40">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleOpenDetail(letter._id)}
-                      className="h-9 px-3.5 rounded-xl text-xs gap-1.5 cursor-pointer"
-                    >
-                      <Eye className="size-3.5" />
-                      <span>Detail</span>
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      disabled={!letter.archiveUrl}
-                      onClick={() => handleDownload(letter)}
-                      className="h-9 px-3.5 rounded-xl text-xs gap-1.5 bg-[#004b87] hover:bg-[#003866] text-white shadow-xs cursor-pointer"
-                    >
-                      <Download className="size-3.5" />
-                      <span>PDF</span>
-                    </Button>
-                  </div>
-                </div>
-              ))}
-
-              {archiveStatus === "CanLoadMore" && (
-                <div className="pt-2 text-center">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => loadMore(30)}
-                    className="text-xs text-muted-foreground"
+                  <div
+                    className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg ${
+                      isDownload
+                        ? "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"
+                        : "bg-muted text-muted-foreground"
+                    }`}
                   >
-                    Muat Lebih Banyak
-                  </Button>
+                    {isDownload ? <Download className="size-4" /> : <Eye className="size-4" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-sm font-medium">{row.actorName ?? "Pengguna"}</span>
+                      {roleLabel(row.actorRole) && (
+                        <Badge variant="outline" className="text-[10px]">
+                          {roleLabel(row.actorRole)}
+                        </Badge>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {isDownload ? "mengunduh" : "membuka"} arsip
+                      </span>
+                    </div>
+                    <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                      {row.letterSubject ?? "(tanpa perihal)"}
+                      {row.letterNumber ? ` — ${row.letterNumber}` : ""}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-[11px] text-muted-foreground">
+                    {format(new Date(row.occurredAt), "d MMM yyyy HH:mm", { locale: localeId })}
+                  </span>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* TAB 2: JEJAK AUDIT */}
-      {activeSubTab === "audit" && (
-        <div className="space-y-4">
-          <div className="relative w-full">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              placeholder="Cari dalam log audit..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 h-11 text-xs sm:text-sm rounded-xl bg-card border-border/80 shadow-2xs"
-            />
+              );
+            })}
+            {status === "CanLoadMore" && (
+              <div className="pt-1">
+                <Button
+                  variant="ghost"
+                  className="w-full cursor-pointer"
+                  size="sm"
+                  onClick={() => loadMore(40)}
+                >
+                  Muat lebih banyak
+                </Button>
+              </div>
+            )}
           </div>
-
-          {auditLogs === undefined ? (
-            <div className="space-y-3">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full rounded-2xl" />
-              ))}
-            </div>
-          ) : auditLogs.length === 0 ? (
-            /* Empty State for Audit Logs */
-            <div className="py-16 sm:py-20 text-center flex flex-col items-center justify-center space-y-4 rounded-2xl bg-card border border-border/50 shadow-2xs px-4">
-              <div className="size-14 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center">
-                <Clock className="size-7" />
-              </div>
-
-              <div className="space-y-1.5 max-w-md">
-                <h3 className="text-lg font-bold text-foreground">
-                  Belum ada jejak audit
-                </h3>
-                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  Setiap aktivitas pembukaan dan pengunduhan arsip dokumen akan dicatat secara otomatis di sini.
-                </p>
-              </div>
-            </div>
-          ) : (
-            /* Audit Log Table / List */
-            <div className="rounded-2xl border bg-card text-card-foreground shadow-2xs overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs sm:text-sm">
-                  <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground border-b">
-                    <tr>
-                      <th className="p-3.5 font-semibold">Waktu</th>
-                      <th className="p-3.5 font-semibold">Pengguna</th>
-                      <th className="p-3.5 font-semibold">Aksi</th>
-                      <th className="p-3.5 font-semibold">Dokumen</th>
-                      <th className="p-3.5 font-semibold">Nomor Surat</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
-                    {auditLogs.map((log: any) => (
-                      <tr key={log._id} className="hover:bg-muted/30 transition-colors">
-                        <td className="p-3.5 text-xs text-muted-foreground whitespace-nowrap font-mono">
-                          {log.occurredAt
-                            ? format(new Date(log.occurredAt), "dd/MM/yyyy HH:mm", { locale: localeId })
-                            : "-"}
-                        </td>
-                        <td className="p-3.5 font-medium text-foreground">
-                          <div className="flex items-center gap-2">
-                            <User className="size-3.5 text-muted-foreground" />
-                            <span>{log.actorName || "Sistem / Pengguna"}</span>
-                          </div>
-                        </td>
-                        <td className="p-3.5">
-                          <Badge
-                            variant={log.action === "download" ? "default" : "secondary"}
-                            className="text-[10px] uppercase tracking-wider"
-                          >
-                            {log.action === "download" ? "Unduh PDF" : "Buka Detail"}
-                          </Badge>
-                        </td>
-                        <td className="p-3.5 font-medium text-foreground max-w-xs truncate">
-                          {log.letterSubject || "-"}
-                        </td>
-                        <td className="p-3.5 text-xs text-muted-foreground font-mono">
-                          {log.letterNumber || "-"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Letter Detail Panel Modal */}
-      {selectedLetterId && (
-        <LetterDetailPanel
-          letterId={selectedLetterId}
-          onClose={() => setSelectedLetterId(null)}
-        />
-      )}
+        )}
+      </div>
     </div>
   );
 }

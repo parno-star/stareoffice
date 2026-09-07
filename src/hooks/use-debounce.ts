@@ -1,2 +1,9 @@
-export * from "../lib/use-debounce.ts";
-export { useDebounce as default } from "../lib/use-debounce.ts";
+export {
+  useDebounce,
+  useDebouncedCallback,
+  useThrottledCallback,
+  type CallOptions,
+  type ControlFunctions,
+  type DebouncedState,
+  type Options,
+} from "use-debounce";

@@ -96,19 +96,7 @@ export default function AccessRequestDialog({
   const handleEnter = async () => {
     setEntering(true);
     try {
-      // Race the mutation against an 800ms timeout so offline/mock mode doesn't hang forever
-      await Promise.race([
-        setViewing({ organizationId }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 800))
-      ]).catch(err => {
-        if (err instanceof Error && err.message === "timeout") {
-          console.warn("setViewingOrganization timed out, proceeding anyway (mock/offline mode fallback)");
-          localStorage.setItem("mock_viewing_org_id", organizationId);
-        } else {
-          throw err;
-        }
-      });
-
+      await setViewing({ organizationId });
       window.location.reload();
     } catch (err) {
       handleError(err);
@@ -149,7 +137,7 @@ export default function AccessRequestDialog({
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-10 w-full" />
           </div>
-        ) : status.active ? (
+        ) : status?.active ? (
           <ActiveState
             expiresAt={status.active.expiresAt}
             scopes={status.active.scopes}
@@ -161,10 +149,10 @@ export default function AccessRequestDialog({
             setReason={setReason}
             submitting={submitting}
             onRequest={handleRequest}
-            hasPending={status.pending !== null}
+            hasPending={Boolean(status.pending)}
             pendingScopes={status.pending?.scopes}
           />
-        ) : status.pending ? (
+        ) : status?.pending ? (
           <PendingState
             requestedAt={status.pending.requestedAt}
             scopes={status.pending.scopes}
@@ -281,23 +269,30 @@ function ActiveState({
             {remaining.map((s) => {
               const checked = addScopes.includes(s.id);
               return (
-                <button
+                <div
                   key={s.id}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => toggleScope(s.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      toggleScope(s.id);
+                    }
+                  }}
                   className={
                     "flex w-full cursor-pointer items-start gap-2.5 rounded-lg border p-2.5 text-left transition-colors " +
                     (checked ? "border-primary bg-primary/5" : "hover:bg-accent")
                   }
                 >
-                  <Checkbox checked={checked} className="mt-0.5 cursor-pointer" />
+                  <Checkbox checked={checked} className="mt-0.5 pointer-events-none" />
                   <span className="min-w-0">
                     <span className="block text-sm font-medium">{s.label}</span>
                     <span className="block text-xs text-muted-foreground">
                       {s.description}
                     </span>
                   </span>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -395,7 +390,7 @@ function RequestState({
                 tabIndex={0}
                 onClick={() => toggleScope(s.id)}
                 onKeyDown={(e) => {
-                  if (e.key === " " || e.key === "Enter") {
+                  if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     toggleScope(s.id);
                   }
@@ -407,7 +402,7 @@ function RequestState({
                     : "hover:bg-accent")
                 }
               >
-                <Checkbox checked={checked} className="pointer-events-none mt-0.5" />
+                <Checkbox checked={checked} className="mt-0.5 pointer-events-none" />
                 <span className="min-w-0">
                   <span className="block text-sm font-medium">{s.label}</span>
                   <span className="block text-xs text-muted-foreground">

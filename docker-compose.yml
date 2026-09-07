@@ -1,0 +1,41 @@
+services:
+  # ===================================================
+  # 1. Convex Realtime Database & Backend Actions
+  # ===================================================
+  convex-backend:
+    image: ghcr.io/get-convex/convex-backend:latest
+    container_name: start-app-convex
+    restart: unless-stopped
+    environment:
+      - INSTANCE_NAME=start-app
+      - INSTANCE_SECRET=69eace5f9fadac0587a054323b5fdf9b612d8b9af69268053a470176dfc83dc1
+      - CONVEX_CLOUD_ORIGIN=http://localhost:3210
+      - CONVEX_SITE_ORIGIN=http://localhost:3211
+      - DISABLE_BEACON=true
+    ports:
+      - "3210:3210"
+      - "3211:3211"
+    volumes:
+      - convex_data:/convex/data
+
+  # ===================================================
+  # 2. Star e-Office Frontend (React 19 + Nginx)
+  # ===================================================
+  start-app-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: start-app:latest
+    container_name: start-app-frontend
+    restart: unless-stopped
+    ports:
+      - "3500:80"
+    environment:
+      - NODE_ENV=production
+      - VITE_CONVEX_URL=http://localhost:3210
+    depends_on:
+      - convex-backend
+
+volumes:
+  convex_data:
+    driver: local

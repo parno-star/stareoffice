@@ -17,13 +17,12 @@
     "jsx": "react-jsx",
 
     /* Linting */
-    "strict": false,
-    "noImplicitAny": false,
+    "strict": true,
 
     "paths": {
-      "@/convex/*": ["./src/lib/*", "./convex/*"],
+      "@/convex/*": ["./convex/*"],
       "@/*": ["./src/*"]
     }
   },
-  "include": ["./src/**/*", "./src/*"]
+  "include": ["./src"]
 }

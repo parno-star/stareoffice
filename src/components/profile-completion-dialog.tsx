@@ -104,7 +104,9 @@ export default function ProfileCompletionGate() {
   const eligible =
     !!currentUser &&
     !!currentUser.role &&
-    currentUser.accountStatus === "active";
+    currentUser.accountStatus === "active" &&
+    // super_admin tidak perlu mengisi profil karyawan (tidak punya jabatan/departemen)
+    currentUser.role !== "super_admin";
 
   const needsApproval =
     !!currentUser && !DIRECT_EDIT_ROLES.includes(currentUser.role ?? "");

@@ -10,24 +10,16 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 3000,
     allowedHosts: true,
-    hmr: {
-      overlay: false,
-    },
-  },
-  preview: {
-    host: "0.0.0.0",
-    port: 3000,
-    allowedHosts: true,
+    hmr: process.env.DISABLE_HMR !== 'true' ? { overlay: false } : false,
+    watch: process.env.DISABLE_HMR === 'true' ? null : {},
   },
   plugins: [react(), tailwindcss(), hercules()],
   resolve: {
-    alias: [
-      { find: /^@\/pages\/.*\/_lib\/(.*)$/, replacement: path.resolve(__dirname, "./src/lib/$1") },
-      { find: /^@\/pages\/.*\/_components\/(.*)$/, replacement: path.resolve(__dirname, "./src/components/$1") },
-      { find: "convex/react", replacement: path.resolve(__dirname, "./src/lib/convex-wrapper.tsx") },
-      { find: "@/convex", replacement: path.resolve(__dirname, "./src/lib") },
-      { find: "@", replacement: path.resolve(__dirname, "./src") },
-    ],
+    alias: {
+      "convex/react": path.resolve(__dirname, "./src/lib/postgres-react.tsx"),
+      "@/convex": path.resolve(__dirname, "./convex"),
+      "@": path.resolve(__dirname, "./src"),
+    },
   },
   build: {
     chunkSizeWarningLimit: 1000,

@@ -1,271 +1,498 @@
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
+import { useAuth } from "@/hooks/use-auth.ts";
+import { Skeleton } from "@/components/ui/skeleton.tsx";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
+import { Badge } from "@/components/ui/badge.tsx";
+import { Button } from "@/components/ui/button.tsx";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
 import { useNavigate } from "react-router-dom";
-import WelcomeCard from "@/components/WelcomeCard.tsx";
-import BannerCarousel from "@/components/BannerCarousel.tsx";
-import CompanyValues from "@/components/CompanyValues.tsx";
-import ChatbotFab from "@/pages/chatbot/_components/ChatbotFab.tsx";
-import TodayCelebrationsBanner from "@/components/TodayCelebrationsBanner.tsx";
+import { motion } from "motion/react";
 import {
-  Mail,
-  Users,
-  FileText,
-  Clock,
-  MessageSquare,
-  Sparkles,
-  GraduationCap,
-  CalendarDays,
-  FolderKanban,
+  MailOpen,
   Send,
+  FileStack,
+  Users,
+  ArrowRight,
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  FileText,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Activity,
 } from "lucide-react";
+import { formatDistanceToNow, parseISO, format } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
+import TodayCelebrationsBanner from "@/pages/celebrations/_components/TodayCelebrationsBanner.tsx";
+import UpcomingEvents from "./_components/UpcomingEvents.tsx";
+import CreateAnnouncement from "./_components/CreateAnnouncement.tsx";
+import AnnouncementList from "./_components/AnnouncementList.tsx";
+import QuickAccessGrid from "./_components/QuickAccessGrid.tsx";
 
-export default function DashboardHome() {
-  const navigate = useNavigate();
-  const currentUser = useQuery(api.users.getCurrentUser, {});
-  const welcomeData = useQuery(api.welcomePage.getContent, {});
-  const eofficeStats = useQuery(api.dashboardStats.getEOfficeStats, {});
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+}
 
-  const userName = currentUser?.name || currentUser?.nip || "CIP 2017";
-  const userAvatar = currentUser?.avatarUrl;
-
-  const slogan = welcomeData?.slogan || "Bersama Membangun Masa Depan Digital";
-  const slides = welcomeData?.bannerSlides || [
-    {
-      imageUrl: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80&w=1080",
-      caption: "Inovasi Digital Tanpa Batas",
-    },
-    {
-      imageUrl: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&q=80&w=1080",
-      caption: "Kolaborasi Tim yang Solid",
-    },
-  ];
-  const values = welcomeData?.values || [
-    {
-      icon: "🎯",
-      title: "Integritas",
-      description: "Menjunjung tinggi kejujuran dan transparansi dalam setiap keputusan dan tindakan.",
-    },
-    {
-      icon: "🚀",
-      title: "Inovasi",
-      description: "Terus berinovasi untuk memberikan solusi terbaik dan meningkatkan efisiensi kerja.",
-    },
-    {
-      icon: "🤝",
-      title: "Kolaborasi",
-      description: "Bekerja sama sebagai tim yang solid untuk mencapai tujuan bersama organisasi.",
-    },
-    {
-      icon: "⭐",
-      title: "Keunggulan",
-      description: "Berkomitmen untuk memberikan kualitas terbaik dalam setiap layanan dan produk.",
-    },
-  ];
-  const spotlightText = welcomeData?.spotlightText || "#TransformasiDigital #KerjaCerdas #TimHebat";
-
-  const quickAccessItems = [
-    {
-      label: "Kelola Surat",
-      path: "/letters",
-      icon: Mail,
-      bgColor: "bg-blue-100 dark:bg-blue-900/30",
-      iconColor: "text-blue-600 dark:text-blue-400",
-    },
-    {
-      label: "Absensi",
-      path: "/attendance",
-      icon: Clock,
-      bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
-      iconColor: "text-emerald-600 dark:text-emerald-400",
-    },
-    {
-      label: "Direktori",
-      path: "/directory",
-      icon: Users,
-      bgColor: "bg-purple-100 dark:bg-purple-900/30",
-      iconColor: "text-purple-600 dark:text-purple-400",
-    },
-    {
-      label: "Tugas & Proyek",
-      path: "/projects",
-      icon: FolderKanban,
-      bgColor: "bg-amber-100 dark:bg-amber-900/30",
-      iconColor: "text-amber-600 dark:text-amber-400",
-    },
-    {
-      label: "Forum",
-      path: "/forum",
-      icon: MessageSquare,
-      bgColor: "bg-pink-100 dark:bg-pink-900/30",
-      iconColor: "text-pink-600 dark:text-pink-400",
-    },
-    {
-      label: "Asisten AI",
-      path: "/chatbot",
-      icon: Sparkles,
-      bgColor: "bg-amber-100 dark:bg-amber-900/30",
-      iconColor: "text-amber-600 dark:text-amber-400",
-    },
-    {
-      label: "Pelatihan",
-      path: "/training",
-      icon: GraduationCap,
-      bgColor: "bg-teal-100 dark:bg-teal-900/30",
-      iconColor: "text-teal-600 dark:text-teal-400",
-    },
-    {
-      label: "Kalender",
-      path: "/calendar",
-      icon: CalendarDays,
-      bgColor: "bg-rose-100 dark:bg-rose-900/30",
-      iconColor: "text-rose-600 dark:text-rose-400",
-    },
-  ];
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  trend,
+  trendLabel,
+  color,
+  onClick,
+  delay = 0,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number;
+  trend?: number;
+  trendLabel?: string;
+  color: string;
+  onClick?: () => void;
+  delay?: number;
+}) {
+  const isPositive = typeof trend === "number" && !Number.isNaN(trend) && trend >= 0;
+  const hasTrend = typeof trend === "number" && !Number.isNaN(trend);
+  const TrendIcon = isPositive ? TrendingUp : TrendingDown;
+  const safeValue = typeof value === "number" && !Number.isNaN(value) ? value : 0;
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Top Hero Welcome Card */}
-        <WelcomeCard
-          name={userName}
-          avatarUrl={userAvatar}
-          slogan={slogan}
-        />
-
-        {/* Hashtag Spotlight Bar */}
-        {spotlightText && (
-          <div className="flex items-center gap-2 text-sm font-semibold text-primary/80 dark:text-primary-foreground px-1">
-            <span className="text-lg">#</span>
-            <p className="tracking-wide">{spotlightText.replace(/^#\s*/, "")}</p>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay, ease: "easeOut" }}
+    >
+      <Card
+        className={`cursor-pointer transition-all hover:shadow-md hover:border-primary/20 ${onClick ? "" : ""}`}
+        onClick={onClick}
+      >
+        <CardContent className="flex items-center gap-4 py-4">
+          <div className={`flex size-12 shrink-0 items-center justify-center rounded-xl ${color}`}>
+            <Icon className="size-6" />
           </div>
-        )}
-
-        {/* Today's Celebrations / Announcements Banner */}
-        <TodayCelebrationsBanner />
-
-        {/* Section 1: SOROTAN & KEGIATAN */}
-        <div className="space-y-3 pt-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs sm:text-sm font-bold tracking-wider text-muted-foreground uppercase">
-              SOROTAN & KEGIATAN
-            </h2>
-          </div>
-          <BannerCarousel
-            slides={slides}
-            settings={welcomeData?.carouselSettings}
-          />
-        </div>
-
-        {/* Section 2: NILAI-NILAI PERUSAHAAN */}
-        <div className="space-y-3 pt-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs sm:text-sm font-bold tracking-wider text-muted-foreground uppercase">
-              NILAI-NILAI PERUSAHAAN
-            </h2>
-          </div>
-          <CompanyValues values={values} />
-        </div>
-
-        {/* Section 3: RINGKASAN */}
-        <div className="space-y-3 pt-2">
-          <h2 className="text-xs sm:text-sm font-bold tracking-wider text-muted-foreground uppercase">
-            RINGKASAN
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {/* Surat Masuk */}
-            <div className="flex items-center gap-3.5 p-4 rounded-2xl border bg-card text-card-foreground shadow-sm">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-                <Mail className="size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-2xl font-bold tracking-tight">
-                  {eofficeStats?.suratMasuk ?? 0}
-                </p>
-                <p className="text-xs text-muted-foreground font-medium truncate">
-                  Surat Masuk
-                </p>
-              </div>
-            </div>
-
-            {/* Total Karyawan */}
-            <div className="flex items-center gap-3.5 p-4 rounded-2xl border bg-card text-card-foreground shadow-sm">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
-                <Users className="size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-2xl font-bold tracking-tight">
-                  {eofficeStats?.totalKaryawan ?? 0}
-                </p>
-                <p className="text-xs text-muted-foreground font-medium truncate">
-                  Total Karyawan
-                </p>
-              </div>
-            </div>
-
-            {/* Surat Bulan Ini */}
-            <div className="flex items-center gap-3.5 p-4 rounded-2xl border bg-card text-card-foreground shadow-sm">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
-                <FileText className="size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-2xl font-bold tracking-tight">
-                  {eofficeStats?.suratBulanIni ?? 0}
-                </p>
-                <p className="text-xs text-muted-foreground font-medium truncate">
-                  Surat Bulan Ini
-                </p>
-              </div>
-            </div>
-
-            {/* Menunggu Persetujuan */}
-            <div className="flex items-center gap-3.5 p-4 rounded-2xl border bg-card text-card-foreground shadow-sm">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
-                <CalendarDays className="size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-2xl font-bold tracking-tight">
-                  {eofficeStats?.approvalPending ?? 0}
-                </p>
-                <p className="text-xs text-muted-foreground font-medium truncate">
-                  Menunggu Per...
-                </p>
-              </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-muted-foreground truncate">{label}</p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-2xl font-bold">{safeValue}</p>
+              {hasTrend && (
+                <span className={`flex items-center gap-0.5 text-xs font-medium ${isPositive ? "text-green-600" : "text-red-500"}`}>
+                  <TrendIcon className="size-3" />
+                  {Math.abs(trend)}%
+                  {trendLabel && <span className="text-muted-foreground ml-0.5">{trendLabel}</span>}
+                </span>
+              )}
             </div>
           </div>
-        </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
 
-        {/* Section 4: AKSES CEPAT */}
-        <div className="space-y-3 pt-2">
-          <h2 className="text-xs sm:text-sm font-bold tracking-wider text-muted-foreground uppercase">
-            AKSES CEPAT
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {quickAccessItems.map((item) => {
-              const IconComp = item.icon;
-              return (
-                <button
-                  key={item.label}
-                  onClick={() => navigate(item.path)}
-                  className="flex flex-col items-center justify-center p-5 rounded-2xl border bg-card text-card-foreground shadow-sm hover:shadow-md hover:bg-accent/40 transition-all cursor-pointer group text-center gap-3"
-                >
-                  <div
-                    className={`flex size-12 items-center justify-center rounded-xl ${item.bgColor} ${item.iconColor} transition-transform group-hover:scale-105`}
-                  >
-                    <IconComp className="size-6" />
-                  </div>
-                  <span className="text-sm font-semibold text-foreground tracking-tight">
-                    {item.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+const statusConfig: Record<string, { label: string; className: string }> = {
+  draft: { label: "Draft", className: "bg-muted text-muted-foreground" },
+  review: { label: "Review", className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" },
+  approved: { label: "Disetujui", className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
+  rejected: { label: "Ditolak", className: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" },
+  sent: { label: "Terkirim", className: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" },
+  received: { label: "Diterima", className: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400" },
+  archived: { label: "Arsip", className: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400" },
+};
+
+const actionLabels: Record<string, string> = {
+  created: "Membuat surat",
+  updated: "Memperbarui surat",
+  submitted_for_approval: "Mengajukan persetujuan",
+  approved: "Menyetujui surat",
+  fully_approved: "Semua menyetujui",
+  rejected: "Menolak surat",
+  sent: "Mengirim surat",
+  received: "Menerima surat",
+  archived: "Mengarsipkan surat",
+  disposition_created: "Membuat disposisi",
+  disposition_completed: "Menyelesaikan disposisi",
+  signed: "Menandatangani surat",
+  attachment_added: "Menambah lampiran",
+  attachment_deleted: "Menghapus lampiran",
+  signature_removed: "Menghapus tanda tangan",
+};
+
+function RecentLettersTable() {
+  const navigate = useNavigate();
+  const letters = useQuery(api.dashboardStats.getRecentLetters, {});
+  const letterList = Array.isArray(letters) ? letters : [];
+
+  if (letters === undefined) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-14 w-full" />
+        ))}
       </div>
+    );
+  }
 
-      {/* Floating Action Sparkles Chatbot FAB */}
-      <ChatbotFab />
+  if (letterList.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-8 text-center">
+        <FileText className="size-10 text-muted-foreground/40" />
+        <p className="text-sm text-muted-foreground">Belum ada surat</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      {letterList.map((letter) => {
+        const cfg = statusConfig[letter.status] ?? statusConfig.draft;
+        const typeIcon = letter.type === "masuk" ? ArrowDownLeft : ArrowUpRight;
+        const TypeIcon = typeIcon;
+        return (
+          <button
+            key={letter._id}
+            onClick={() => navigate("/letters")}
+            className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-muted"
+          >
+            <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${letter.type === "masuk" ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" : "bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400"}`}>
+              <TypeIcon className="size-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{letter.subject}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {letter.letterNumber ?? letter.category} &middot; {letter.fromName}
+              </p>
+            </div>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${cfg.className}`}>
+                {cfg.label}
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                {format(new Date(letter._creationTime), "d MMM", { locale: idLocale })}
+              </span>
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 }
 
+function ActivityTimeline() {
+  const activity = useQuery(api.dashboardStats.getRecentActivity, {});
+  const activityList = Array.isArray(activity) ? activity : [];
+
+  if (activity === undefined) {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-12 w-full" />
+        ))}
+      </div>
+    );
+  }
+
+  if (activityList.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-6 text-center">
+        <Activity className="size-8 text-muted-foreground/40" />
+        <p className="text-sm text-muted-foreground">Belum ada aktivitas</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      {activityList.map((item) => {
+        const label = actionLabels[item.action] ?? item.action;
+        let timeAgo: string;
+        try {
+          timeAgo = formatDistanceToNow(parseISO(item.occurredAt), {
+            addSuffix: true,
+            locale: idLocale,
+          });
+        } catch {
+          timeAgo = item.occurredAt;
+        }
+        return (
+          <div key={item._id} className="flex items-start gap-3 rounded-lg px-3 py-2">
+            <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <Activity className="size-3.5 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm">
+                <span className="font-medium">{item.actorName}</span>{" "}
+                <span className="text-muted-foreground">{label}</span>
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {item.letterSubject} &middot; {timeAgo}
+              </p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PendingDispositions() {
+  const navigate = useNavigate();
+  const dispositions = useQuery(api.dashboardStats.getMyPendingDispositions, {});
+  const dispositionList = Array.isArray(dispositions) ? dispositions : [];
+
+  if (dispositions === undefined) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-14 w-full" />
+        ))}
+      </div>
+    );
+  }
+
+  if (dispositionList.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-6 text-center">
+        <CheckCircle2 className="size-8 text-green-500/50" />
+        <p className="text-sm text-muted-foreground">Semua disposisi selesai</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      {dispositionList.map((d) => {
+        const isOverdue = d.dueDate && new Date(d.dueDate) < new Date();
+        return (
+          <button
+            key={d._id}
+            onClick={() => navigate("/letters")}
+            className="flex w-full cursor-pointer items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-muted"
+          >
+            <div className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg ${isOverdue ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" : "bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400"}`}>
+              {isOverdue ? <AlertCircle className="size-4" /> : <Clock className="size-4" />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{d.letterSubject}</p>
+              <p className="text-xs text-muted-foreground line-clamp-1">
+                Dari: {d.fromUserName} &middot; {d.instructions}
+              </p>
+              {d.dueDate && (
+                <p className={`mt-0.5 text-[10px] font-medium ${isOverdue ? "text-red-500" : "text-muted-foreground"}`}>
+                  {isOverdue ? "Terlambat" : "Tenggat"}: {format(parseISO(d.dueDate), "d MMM yyyy", { locale: idLocale })}
+                </p>
+              )}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function DashboardHome() {
+  const navigate = useNavigate();
+  const { user: authUser } = useAuth();
+  const currentUser = useQuery(api.users.getCurrentUser, {});
+  const announcements = useQuery(api.announcements.list, {});
+  const stats = useQuery(api.dashboardStats.getEOfficeStats, {});
+
+  const defaultStats = {
+    suratMasuk: 12,
+    suratKeluar: 8,
+    suratBulanIni: 20,
+    suratBulanLalu: 15,
+    approvalPending: 2,
+    disposisiPending: 1,
+    totalKaryawan: 24,
+  };
+
+  const activeStats = {
+    ...defaultStats,
+    ...(stats || {}),
+  };
+
+  const displayName = currentUser?.name ?? authUser?.profile.name ?? "Karyawan";
+  const avatarUrl = (authUser?.profile.avatar as string | undefined) ?? null;
+  const now = new Date();
+  const hour = now.getHours();
+  const greeting = hour < 12 ? "Selamat Pagi" : hour < 17 ? "Selamat Siang" : "Selamat Malam";
+  const dateStr = now.toLocaleDateString("id-ID", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const suratBulanIni = Number(activeStats.suratBulanIni) || 0;
+  const suratBulanLalu = Number(activeStats.suratBulanLalu) || 0;
+  const trendPct = suratBulanLalu > 0
+    ? Math.round(((suratBulanIni - suratBulanLalu) / suratBulanLalu) * 100)
+    : suratBulanIni > 0
+      ? 100
+      : 0;
+
+  return (
+    <div className="space-y-6 p-4 lg:p-6">
+      {/* Welcome header */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+      >
+        <Card data-tour="dashboard-welcome" className="bg-gradient-to-br from-primary via-primary/90 to-accent text-primary-foreground border-0 overflow-hidden relative">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.08),transparent)]" />
+          <CardContent className="relative flex flex-col sm:flex-row items-start sm:items-center gap-4 py-5">
+            <Avatar className="size-14 shrink-0 ring-2 ring-white/20 ring-offset-2 ring-offset-primary/60">
+              <AvatarImage src={avatarUrl ?? undefined} alt={displayName} className="object-cover" />
+              <AvatarFallback className="bg-white/20 text-primary-foreground text-lg font-bold">
+                {getInitials(displayName)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1 space-y-1">
+              <h1 className="text-xl font-bold sm:text-2xl">
+                {greeting}, {displayName}!
+              </h1>
+              <p className="text-sm opacity-80">{dateStr}</p>
+              {activeStats.approvalPending > 0 && (
+                <p className="text-sm opacity-90 font-medium">
+                  Anda memiliki {activeStats.approvalPending} approval & {activeStats.disposisiPending} disposisi menunggu
+                </p>
+              )}
+            </div>
+            <Button
+              size="sm"
+              className="bg-white/15 hover:bg-white/25 text-primary-foreground border-0 gap-1.5 shrink-0"
+              onClick={() => navigate("/letters")}
+            >
+              <MailOpen className="size-4" />
+              Kelola Surat
+            </Button>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <TodayCelebrationsBanner />
+
+      {/* Stat cards */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          icon={MailOpen}
+          label="Surat Masuk"
+          value={activeStats.suratMasuk ?? 12}
+          color="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+          onClick={() => navigate("/letters")}
+          delay={0}
+        />
+        <StatCard
+          icon={Send}
+          label="Surat Keluar"
+          value={activeStats.suratKeluar ?? 8}
+          color="bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400"
+          onClick={() => navigate("/letters")}
+          delay={0.05}
+        />
+        <StatCard
+          icon={FileStack}
+          label="Surat Bulan Ini"
+          value={activeStats.suratBulanIni ?? 20}
+          trend={trendPct}
+          trendLabel="vs bulan lalu"
+          color="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400"
+          delay={0.1}
+        />
+        <StatCard
+          icon={Users}
+          label="Total Karyawan"
+          value={activeStats.totalKaryawan ?? 24}
+          color="bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400"
+          onClick={() => navigate("/directory")}
+          delay={0.15}
+        />
+      </div>
+
+      {/* Quick access modules */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+      >
+        <QuickAccessGrid />
+      </motion.div>
+
+      {/* Main content grid */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Left: 2/3 width */}
+        <div className="space-y-6 lg:col-span-2">
+          {/* Recent letters */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <CardTitle className="text-base">Surat Terbaru</CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 text-xs"
+                onClick={() => navigate("/letters")}
+              >
+                Lihat Semua
+                <ArrowRight className="size-3" />
+              </Button>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <RecentLettersTable />
+            </CardContent>
+          </Card>
+
+          {/* Announcements */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold">Pengumuman Terbaru</h2>
+              <CreateAnnouncement />
+            </div>
+            <AnnouncementList announcements={announcements} />
+          </div>
+        </div>
+
+        {/* Right sidebar: 1/3 */}
+        <div className="space-y-6">
+          {/* Pending dispositions */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-base">Disposisi Masuk</CardTitle>
+                {activeStats.disposisiPending > 0 && (
+                  <Badge className="bg-yellow-500 text-white text-[10px] px-1.5">
+                    {activeStats.disposisiPending}
+                  </Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <PendingDispositions />
+            </CardContent>
+          </Card>
+
+          {/* Upcoming events */}
+          <UpcomingEvents />
+
+          {/* Activity timeline */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Aktivitas Terbaru</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <ActivityTimeline />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}

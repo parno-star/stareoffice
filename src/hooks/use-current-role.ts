@@ -4,7 +4,6 @@ import {
   isAdminRole,
   isSuperAdminRole,
   normalizeRole,
-  MENU_KEYS,
   type Role,
   type MenuKey,
 } from "@/convex/roles.ts";
@@ -21,21 +20,21 @@ export function useCurrentRole(): {
   const menus = useQuery(api.userSettings.getMyAllowedMenus, {});
   if (user === undefined) {
     return {
-      role: "super_admin",
-      userId: "demo_super_admin",
-      isAdmin: true,
-      isSuperAdmin: true,
-      allowedMenus: MENU_KEYS,
-      isLoading: false,
+      role: undefined,
+      userId: undefined,
+      isAdmin: false,
+      isSuperAdmin: false,
+      allowedMenus: undefined,
+      isLoading: true,
     };
   }
-  const role = user ? normalizeRole(user.role) : "super_admin";
+  const role = user ? normalizeRole(user.role) : undefined;
   return {
     role,
-    userId: user?._id ?? "demo_super_admin",
-    isAdmin: role ? isAdminRole(role) : true,
-    isSuperAdmin: role ? isSuperAdminRole(role) : true,
-    allowedMenus: menus && menus.length > 0 ? menus : MENU_KEYS,
-    isLoading: false,
+    userId: user?._id,
+    isAdmin: isAdminRole(user?.role),
+    isSuperAdmin: isSuperAdminRole(user?.role),
+    allowedMenus: menus,
+    isLoading: user === undefined,
   };
 }

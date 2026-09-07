@@ -1,434 +1,522 @@
-import React, { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
-import { Badge } from "@/components/ui/badge.tsx";
-import { Button } from "@/components/ui/button.tsx";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs.tsx";
-import { Input } from "@/components/ui/input.tsx";
+import type { Doc, Id } from "@/convex/_generated/dataModel.d.ts";
+import { Card, CardContent } from "@/components/ui/card.tsx";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.tsx";
+import { Badge } from "@/components/ui/badge.tsx";
+import { Separator } from "@/components/ui/separator.tsx";
+import { Skeleton } from "@/components/ui/skeleton.tsx";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
 import {
-  Hash,
-  User,
-  Fingerprint,
   Mail,
-  Briefcase,
-  Building2,
   Phone,
   MapPin,
-  Award,
+  Building2,
+  Briefcase,
   Cake,
-  UserCheck,
-  Info,
+  Award,
   Sparkles,
-  Plus,
-  X,
-  MessageSquare,
-  Users2,
-  FileText,
-  History,
-  Trash2,
-  Check,
-  Copy,
+  Star,
+  Users as UsersIcon,
+  Search,
+  Hash,
+  User as UserIcon,
+  Fingerprint,
+  CalendarDays,
+  UserCog,
+  Info,
+  Clock,
 } from "lucide-react";
-import ProfileAvatarUploader from "@/components/ui/ProfileAvatarUploader.tsx";
-import EditProfileDialog from "@/components/ui/EditProfileDialog.tsx";
-import ProfileDocumentsSection from "@/components/ProfileDocumentsSection.tsx";
-import EmployeeHistorySection from "@/components/EmployeeHistorySection.tsx";
-import { MOCK_CURRENT_USER } from "@/lib/convex-mock-data.ts";
-import { toast } from "sonner";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-function getInitials(name?: string) {
-  if (!name) return "?";
-  const parts = name.trim().split(/\s+/);
-  return (parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "");
-}
-
-function formatDateID(dateStr?: string) {
-  if (!dateStr || dateStr === "—") return "—";
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return dateStr;
-  return date.toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function EmployeeDataRow({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value?: string | null;
-}) {
-  const displayValue = value && value.trim() !== "" ? value : "—";
-
-  return (
-    <div className="flex items-center gap-3.5 py-2.5 px-3 rounded-xl hover:bg-muted/40 transition-colors">
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted/60 dark:bg-muted/30 text-muted-foreground">
-        <Icon className="size-4" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-          {label}
-        </p>
-        <p className="text-sm font-bold text-foreground mt-0.5 truncate">
-          {displayValue}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function SkillsSection({ user }: { user: any }) {
-  const [skills, setSkills] = useState<string[]>([
-    "Manajemen SDM",
-    "Administrasi Umum",
-    "Pengelolaan Arsip",
-    "Komunikasi Publik",
-    "Kepemimpinan Tim",
-  ]);
-  const [newSkill, setNewSkill] = useState("");
-  const [adding, setAdding] = useState(false);
-
-  const handleAddSkill = () => {
-    if (!newSkill.trim()) return;
-    if (skills.includes(newSkill.trim())) {
-      toast.error("Keahlian sudah ada");
-      return;
-    }
-    setSkills([...skills, newSkill.trim()]);
-    setNewSkill("");
-    setAdding(false);
-    toast.success("Keahlian ditambahkan");
-  };
-
-  const handleRemoveSkill = (skillToRemove: string) => {
-    setSkills(skills.filter((s) => s !== skillToRemove));
-    toast.success("Keahlian dihapus");
-  };
-
-  return (
-    <Card className="rounded-2xl border shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle className="text-base font-bold flex items-center gap-2">
-          <Sparkles className="size-4 text-amber-500" />
-          Keahlian & Kompetensi
-        </CardTitle>
-        {!adding && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setAdding(true)}
-            className="gap-1.5 text-xs rounded-lg h-8"
-          >
-            <Plus className="size-3.5" />
-            Tambah Keahlian
-          </Button>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {adding && (
-          <div className="flex items-center gap-2 max-w-md">
-            <Input
-              placeholder="Masukkan keahlian (misal: Ms. Office, Payroll)..."
-              value={newSkill}
-              onChange={(e) => setNewSkill(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAddSkill()}
-              autoFocus
-              className="text-sm h-9 rounded-xl"
-            />
-            <Button size="sm" onClick={handleAddSkill} className="h-9 rounded-xl">
-              Simpan
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setAdding(false)}
-              className="h-9 rounded-xl"
-            >
-              Batal
-            </Button>
-          </div>
-        )}
-
-        <div className="flex flex-wrap gap-2">
-          {skills.map((skill) => (
-            <Badge
-              key={skill}
-              variant="secondary"
-              className="px-3 py-1.5 text-xs font-medium rounded-lg flex items-center gap-2 bg-secondary/80 hover:bg-secondary text-secondary-foreground"
-            >
-              <span>{skill}</span>
-              <button
-                type="button"
-                onClick={() => handleRemoveSkill(skill)}
-                className="text-muted-foreground hover:text-destructive transition-colors"
-              >
-                <X className="size-3" />
-              </button>
-            </Badge>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function ColleaguesSection({ department }: { department?: string }) {
-  const employees = useQuery(api.users.listEmployees, {}) ?? [];
-  const navigate = useNavigate();
-
-  const colleagues = employees.length > 0 ? employees : [MOCK_CURRENT_USER];
-
-  return (
-    <Card className="rounded-2xl border shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-base font-bold flex items-center gap-2">
-          <Users2 className="size-4 text-primary" />
-          Rekan Kerja ({colleagues.length})
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {colleagues.map((colleague: any) => (
-            <div
-              key={colleague._id || colleague.email}
-              className="p-4 rounded-xl border bg-card hover:bg-muted/30 transition-all flex items-start gap-3.5 group"
-            >
-              <Avatar className="size-11 rounded-xl">
-                {colleague.avatarUrl ? (
-                  <AvatarImage src={colleague.avatarUrl} alt={colleague.name} className="object-cover" />
-                ) : null}
-                <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm rounded-xl">
-                  {getInitials(colleague.name)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1 space-y-1">
-                <p className="text-sm font-semibold truncate text-foreground group-hover:text-primary transition-colors">
-                  {colleague.name}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {colleague.jobTitle || "Karyawan"}
-                </p>
-                {colleague.department && (
-                  <Badge variant="outline" className="text-[10px] font-normal px-2 py-0.5">
-                    {colleague.department}
-                  </Badge>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="shrink-0 text-muted-foreground hover:text-primary"
-                onClick={() => navigate("/messages")}
-                title="Kirim pesan"
-              >
-                <MessageSquare className="size-4" />
-              </Button>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+import { Input } from "@/components/ui/input.tsx";
+import {
+  formatIsoFullDate,
+} from "@/pages/celebrations/_lib/celebrations-utils.ts";
+import {
+  colorForDepartment,
+  COLOR_CLASSES,
+  getInitials,
+  SKILL_CATEGORY_LABELS,
+} from "@/pages/directory/_lib/directory-utils.ts";
+import EditProfileDialog from "@/pages/directory/_components/EditProfileDialog.tsx";
+import ProfileAvatarUploader from "@/pages/my-profile/_components/ProfileAvatarUploader.tsx";
+import EmployeeHistorySection from "@/pages/directory/_components/EmployeeHistorySection.tsx";
+import ProfileDocumentsSection from "./_components/ProfileDocumentsSection.tsx";
+import {
+  buildOrderedColumns,
+  builtInValue,
+  computeAge,
+  computeTenure,
+  formatNumberValue,
+  isMasaKerjaLabel,
+  isUsiaLabel,
+  type OrderedColumn,
+} from "@/pages/directory/_lib/directory-columns.ts";
 
 export default function MyProfilePage() {
-  const currentUserQuery = useQuery(api.users.getCurrentUser, {});
-  const user = currentUserQuery ?? MOCK_CURRENT_USER;
+  const currentUser = useQuery(api.users.getCurrentUser, {});
+  const detail = useQuery(
+    api.directory.getEmployeeDetail,
+    currentUser?._id ? { userId: currentUser._id as Id<"users"> } : "skip",
+  );
+  const customFieldDefs = useQuery(api.directoryFields.list, {});
+  const columnOrder = useQuery(api.directoryFields.getColumnOrder, {});
+
+  const [searchColleague, setSearchColleague] = useState("");
+  const navigate = useNavigate();
+
+  if (
+    currentUser === undefined ||
+    detail === undefined ||
+    customFieldDefs === undefined ||
+    columnOrder === undefined
+  ) {
+    return (
+      <div className="mx-auto max-w-5xl space-y-4 p-4 lg:p-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-48 w-full" />
+        <div className="grid gap-4 md:grid-cols-2">
+          <Skeleton className="h-60 w-full" />
+          <Skeleton className="h-60 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  const detailData =
+    detail && typeof detail === "object" && !Array.isArray(detail)
+      ? (detail as {
+          user?: Doc<"users">;
+          manager?: Doc<"users"> | null;
+          directReports?: Array<Doc<"users">>;
+          colleagues?: Array<Doc<"users">>;
+          skills?: Array<{ skill: string; category: string; level: number }>;
+        })
+      : null;
+
+  const user = detailData?.user ?? currentUser;
+  const manager = detailData?.manager ?? null;
+  const directReports = Array.isArray(detailData?.directReports)
+    ? detailData.directReports
+    : [];
+  const colleagues = Array.isArray(detailData?.colleagues)
+    ? detailData.colleagues
+    : [];
+  const skills = Array.isArray(detailData?.skills) ? detailData.skills : [];
+
+  if (!user) {
+    return (
+      <div className="mx-auto max-w-5xl p-6">
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">
+            Data profil tidak ditemukan.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const tone = COLOR_CLASSES[colorForDepartment(user?.department)] ?? COLOR_CLASSES["slate"] ?? {
+    bg: "bg-slate-500",
+    chip: "bg-slate-100 text-slate-700",
+    accent: "bg-slate-500",
+  };
+
+  // Build the full ordered list of directory columns (built-in + custom) exactly
+  // as HR configured it, so the profile mirrors the directory. Every column is
+  // shown, including empty ones (rendered as "—").
+  const orderedColumns = buildOrderedColumns(
+    customFieldDefs ?? [],
+    columnOrder ?? [],
+  );
+  const profileFields = orderedColumns.map((col) => resolveProfileField(col, user, manager?.name ?? null));
+
+  // Filter colleagues by search
+  const filteredColleagues = searchColleague.trim()
+    ? colleagues.filter(
+        (c) =>
+          (c.name ?? "").toLowerCase().includes(searchColleague.toLowerCase()) ||
+          (c.jobTitle ?? "").toLowerCase().includes(searchColleague.toLowerCase()),
+      )
+    : colleagues;
 
   return (
-    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
-      {/* Page Title */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-          Data Profil Saya
-        </h1>
-      </div>
+    <div className="mx-auto max-w-5xl space-y-5 p-4 lg:p-6">
+      <h1 className="text-xl font-bold">Data Profil Saya</h1>
 
-      {/* Profile Main Header Card */}
-      <Card className="overflow-hidden border shadow-sm rounded-2xl bg-card">
-        {/* Banner Section */}
-        <div className="h-28 sm:h-36 bg-gradient-to-r from-sky-100 via-sky-50 to-indigo-100 dark:from-slate-800 dark:via-slate-850 dark:to-slate-900 border-b relative" />
-
-        <CardContent className="relative p-5 sm:p-6 pt-0 -mt-14 sm:-mt-16">
-          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-5">
-            {/* Avatar Photo with Delete / Upload Button */}
-            <div className="shrink-0">
-              <ProfileAvatarUploader
-                avatarUrl={user.avatarUrl}
-                name={user.name}
-                initials={getInitials(user.name)}
-                toneClass="bg-primary/10 text-primary"
-              />
+      {/* Hero profile card */}
+      <Card className="overflow-hidden pt-0">
+        <div className={`h-20 w-full ${tone.accent}/80`}>
+          <div
+            className={`h-full w-full ${tone.bg} bg-[radial-gradient(circle_at_20%_50%,rgba(255,255,255,0.4),transparent_40%),radial-gradient(circle_at_80%_50%,rgba(255,255,255,0.3),transparent_50%)]`}
+          />
+        </div>
+        <CardContent className="-mt-10 pb-6">
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-end">
+            <ProfileAvatarUploader
+              avatarUrl={user.avatarUrl}
+              name={user.name}
+              initials={getInitials(user.name)}
+              toneClass={tone.chip}
+            />
+            <div className="min-w-0 flex-1 space-y-1 pt-2 sm:pt-8">
+              <h2 className="text-xl font-bold leading-tight">
+                {user.name ?? "Tanpa Nama"}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {user.jobTitle ?? "Belum ada jabatan"}
+              </p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {user.department ? (
+                  <Badge
+                    variant="secondary"
+                    className={`${tone.chip} border-transparent`}
+                  >
+                    <Building2 className="mr-1 size-3" />
+                    {user.department}
+                  </Badge>
+                ) : null}
+                {user.location ? (
+                  <Badge variant="secondary">
+                    <MapPin className="mr-1 size-3" />
+                    {user.location}
+                  </Badge>
+                ) : null}
+              </div>
             </div>
-
-            {/* Profile Info Summary */}
-            <div className="flex-1 min-w-0 space-y-2 pt-1 sm:pt-0">
-              <div>
-                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-                  {user.name || "CIP 2017"}
-                </h2>
-                <p className="text-sm font-medium text-muted-foreground mt-0.5">
-                  {user.jobTitle || "Belum ada jabatan"}
-                </p>
-              </div>
-
-              {/* Department Badge */}
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge
-                  variant="secondary"
-                  className="bg-sky-50 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 hover:bg-sky-100 font-medium px-2.5 py-1 text-xs flex items-center gap-1.5 border border-sky-200/60 dark:border-sky-800/50 rounded-lg"
-                >
-                  <Building2 className="size-3.5 text-sky-600 dark:text-sky-400" />
-                  {user.department || "SDM DAN UMUM"}
-                </Badge>
-              </div>
-
-              {/* Edit Profile Action Button */}
-              <div className="pt-1">
-                <EditProfileDialog currentUser={user as any} />
-              </div>
+            <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:pt-8">
+              <EditProfileDialog currentUser={user} />
             </div>
           </div>
 
-          {/* Address / Status Box */}
-          <div className="mt-5 p-3.5 bg-muted/40 rounded-xl text-sm border text-foreground font-medium">
-            {user.address || user.bio || "Pensiun BUMN"}
-          </div>
+          {user.bio ? (
+            <div className="mt-4 rounded-lg border bg-muted/30 p-3 text-sm leading-relaxed">
+              {user.bio}
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
-      {/* Tabs Navigation */}
-      <Tabs defaultValue="kontak" className="w-full space-y-6">
-        <TabsList className="w-full flex justify-start gap-2 bg-transparent p-0 border-b rounded-none overflow-x-auto pb-2">
-          <TabsTrigger
-            value="kontak"
-            className="rounded-xl px-4 py-2 text-sm font-medium data-[state=active]:bg-sky-50 dark:data-[state=active]:bg-sky-950/50 data-[state=active]:text-primary border border-transparent data-[state=active]:border-primary/20 transition-all flex items-center gap-2 shrink-0"
-          >
+      {/* Tabs: Kontak & Keahlian, Rekan Kerja, Riwayat */}
+      <Tabs defaultValue="contact" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="contact" className="cursor-pointer">
             Kontak & Keahlian
           </TabsTrigger>
-          <TabsTrigger
-            value="rekan"
-            className="rounded-xl px-4 py-2 text-sm font-medium data-[state=active]:bg-sky-50 dark:data-[state=active]:bg-sky-950/50 data-[state=active]:text-primary border border-transparent data-[state=active]:border-primary/20 transition-all flex items-center gap-2 shrink-0"
-          >
+          <TabsTrigger value="colleagues" className="cursor-pointer">
             Rekan Kerja
           </TabsTrigger>
-          <TabsTrigger
-            value="dokumen"
-            className="rounded-xl px-4 py-2 text-sm font-medium data-[state=active]:bg-sky-50 dark:data-[state=active]:bg-sky-950/50 data-[state=active]:text-primary border border-transparent data-[state=active]:border-primary/20 transition-all flex items-center gap-2 shrink-0"
-          >
+          <TabsTrigger value="documents" className="cursor-pointer">
             Dokumen
           </TabsTrigger>
-          <TabsTrigger
-            value="riwayat"
-            className="rounded-xl px-4 py-2 text-sm font-medium data-[state=active]:bg-sky-50 dark:data-[state=active]:bg-sky-950/50 data-[state=active]:text-primary border border-transparent data-[state=active]:border-primary/20 transition-all flex items-center gap-2 shrink-0"
-          >
+          <TabsTrigger value="history" className="cursor-pointer">
             Riwayat
           </TabsTrigger>
         </TabsList>
 
-        {/* Tab 1: DATA KARYAWAN & Keahlian */}
-        <TabsContent value="kontak" className="space-y-6">
-          <Card className="rounded-2xl border shadow-sm">
-            <CardContent className="p-5 sm:p-6 space-y-4">
-              {/* Title Section */}
-              <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase mb-2">
-                DATA KARYAWAN
+        {/* Tab: Kontak & Keahlian */}
+        <TabsContent value="contact" className="space-y-5">
+          <Card>
+            <CardContent className="p-5">
+              <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Data Karyawan
+              </h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {profileFields.map((f) => (
+                  <InfoRow
+                    key={f.token}
+                    icon={f.icon}
+                    label={f.label}
+                    value={f.value}
+                    computed={f.computed}
+                  />
+                ))}
+              </div>
+
+              <p className="mt-4 flex items-start gap-1.5 text-xs text-muted-foreground">
+                <Info className="mt-0.5 size-3.5 shrink-0" />
+                Sebagian data dikelola oleh HR. Gunakan tombol "Edit Profil" untuk
+                mengajukan perubahan pada data yang boleh Anda ubah.
               </p>
 
-              {/* Employee Data Fields matching exact screenshot */}
-              <div className="space-y-1 divide-y divide-border/40">
-                <EmployeeDataRow
-                  icon={Hash}
-                  label="NO."
-                  value={user.employeeId || user.no}
-                />
-                <EmployeeDataRow
-                  icon={User}
-                  label="NAMA"
-                  value={user.name || "CIP 2017"}
-                />
-                <EmployeeDataRow
-                  icon={Fingerprint}
-                  label="NIP"
-                  value={user.nip}
-                />
-                <EmployeeDataRow
-                  icon={Mail}
-                  label="EMAIL"
-                  value={user.email || "cipkai2017@gmail.com"}
-                />
-                <EmployeeDataRow
-                  icon={Briefcase}
-                  label="JABATAN"
-                  value={user.jobTitle}
-                />
-                <EmployeeDataRow
-                  icon={Building2}
-                  label="DEPARTEMEN"
-                  value={user.department || "SDM DAN UMUM"}
-                />
-                <EmployeeDataRow
-                  icon={Phone}
-                  label="TELEPON"
-                  value={user.phone || "+628128052324"}
-                />
-                <EmployeeDataRow
-                  icon={MapPin}
-                  label="LOKASI"
-                  value={user.location}
-                />
-                <EmployeeDataRow
-                  icon={Award}
-                  label="TANGGAL MULAI KERJA"
-                  value={formatDateID(user.startDate || user.joinDate || "2024-03-05")}
-                />
-                <EmployeeDataRow
-                  icon={Cake}
-                  label="TANGGAL LAHIR"
-                  value={formatDateID(user.birthDate)}
-                />
-                <EmployeeDataRow
-                  icon={UserCheck}
-                  label="ATASAN"
-                  value={user.managerName || user.atasan}
-                />
-              </div>
+              {manager ? (
+                <>
+                  <Separator className="my-5" />
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Atasan Langsung
+                  </h3>
+                  <button
+                    onClick={() => navigate(`/directory/${manager._id}`)}
+                    className="flex w-full cursor-pointer items-center gap-3 rounded-lg border bg-background p-2.5 text-left transition-all hover:border-primary/40 hover:shadow-sm"
+                  >
+                    <Avatar className="size-9">
+                      {manager.avatarUrl ? (
+                        <AvatarImage src={manager.avatarUrl} alt={manager.name ?? ""} />
+                      ) : null}
+                      <AvatarFallback className="text-xs font-semibold">
+                        {getInitials(manager.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{manager.name ?? "—"}</p>
+                      <p className="truncate text-xs text-muted-foreground">{manager.jobTitle ?? "—"}</p>
+                    </div>
+                  </button>
+                </>
+              ) : null}
 
-              {/* HR Notice box */}
-              <div className="mt-4 pt-3 flex items-start gap-2.5 text-xs text-muted-foreground bg-muted/30 p-3.5 rounded-xl border border-border/50">
-                <Info className="size-4 text-muted-foreground shrink-0 mt-0.5" />
-                <p className="leading-relaxed">
-                  Sebagian data dikelola oleh HR. Gunakan tombol &quot;Edit Profil&quot; untuk mengajukan perubahan pada data yang boleh Anda ubah.
+              <Separator className="my-5" />
+
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Sparkles className="mr-1 inline size-3" />
+                Keahlian & Kompetensi
+              </h3>
+              {skills.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Belum ada keahlian yang terdaftar. Gunakan tombol "Edit Profil" untuk menambahkan keahlian Anda.
                 </p>
-              </div>
+              ) : (
+                <div className="space-y-2">
+                  {skills.map((s) => (
+                    <div
+                      key={`${s.skill}-${s.category}`}
+                      className="flex items-center gap-3 rounded-lg border bg-muted/30 p-2.5"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{s.skill}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {SKILL_CATEGORY_LABELS[s.category] ?? s.category}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 gap-0.5">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`size-3.5 ${
+                              i < s.level
+                                ? "fill-amber-500 text-amber-500"
+                                : "text-muted-foreground/30"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
-
-          <SkillsSection user={user} />
         </TabsContent>
 
-        {/* Tab 2: Rekan Kerja */}
-        <TabsContent value="rekan">
-          <ColleaguesSection department={user.department} />
+        {/* Tab: Rekan Kerja */}
+        <TabsContent value="colleagues" className="space-y-4">
+          <Card>
+            <CardContent className="p-5">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <UsersIcon className="mr-1 inline size-3" />
+                  Rekan Kerja ({colleagues.length})
+                </h3>
+                {colleagues.length > 5 && (
+                  <div className="relative w-full sm:w-56">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Cari rekan..."
+                      value={searchColleague}
+                      onChange={(e) => setSearchColleague(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {directReports.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="mb-2 text-xs font-semibold text-muted-foreground">
+                    Bawahan Langsung ({directReports.length})
+                  </h4>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {directReports.map((r) => (
+                      <ColleagueCard
+                        key={r._id}
+                        user={r}
+                        onClick={() => navigate(`/directory/${r._id}`)}
+                      />
+                    ))}
+                  </div>
+                  <Separator className="my-4" />
+                </div>
+              )}
+
+              {filteredColleagues.length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">
+                  {searchColleague.trim() ? "Tidak ada rekan yang cocok." : "Belum ada rekan kerja terdaftar."}
+                </p>
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {filteredColleagues.map((c) => (
+                    <ColleagueCard
+                      key={c._id}
+                      user={c}
+                      onClick={() => navigate(`/directory/${c._id}`)}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        {/* Tab 3: Dokumen */}
-        <TabsContent value="dokumen">
+        {/* Tab: Dokumen */}
+        <TabsContent value="documents">
           <ProfileDocumentsSection userId={user._id} />
         </TabsContent>
 
-        {/* Tab 4: Riwayat */}
-        <TabsContent value="riwayat">
-          <EmployeeHistorySection userId={user._id} isSelf={true} />
+        {/* Tab: Riwayat */}
+        <TabsContent value="history">
+          <EmployeeHistorySection userId={user._id} />
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+type ProfileField = {
+  token: string;
+  label: string;
+  value: string | null;
+  icon: React.ComponentType<{ className?: string }>;
+  computed?: boolean;
+};
+
+// Icons for the built-in directory columns, keyed by their stable token.
+const BUILT_IN_ICONS: Record<
+  string,
+  React.ComponentType<{ className?: string }>
+> = {
+  no: Hash,
+  nama: UserIcon,
+  nip: Fingerprint,
+  email: Mail,
+  jobTitle: Briefcase,
+  department: Building2,
+  phone: Phone,
+  location: MapPin,
+  startDate: Award,
+  dateOfBirth: Cake,
+  managerId: UserCog,
+};
+
+// Resolve a single ordered directory column into a displayable profile field.
+// Mirrors the directory table: dates are formatted, numbers grouped, and the
+// computed "Masa Kerja"/"Usia" fields are derived live from the employee's dates.
+function resolveProfileField(
+  col: OrderedColumn,
+  user: Doc<"users">,
+  managerName: string | null,
+): ProfileField {
+  if (col.kind === "builtin") {
+    const raw = builtInValue(user, col.builtin.key, managerName);
+    let value: string | null = raw ?? null;
+    if (raw && col.builtin.type === "date") {
+      value = formatIsoFullDate(raw);
+    }
+    return {
+      token: col.token,
+      label: col.builtin.label,
+      value,
+      icon: BUILT_IN_ICONS[col.builtin.key] ?? Info,
+    };
+  }
+
+  const label = col.custom.label;
+  // "Masa Kerja" is always computed live from the start date, never stored.
+  if (isMasaKerjaLabel(label)) {
+    return {
+      token: col.token,
+      label,
+      value: computeTenure(user.startDate),
+      icon: Clock,
+      computed: true,
+    };
+  }
+  // "Usia" is always computed live from the date of birth, never stored.
+  if (isUsiaLabel(label)) {
+    return {
+      token: col.token,
+      label,
+      value: computeAge(user.dateOfBirth),
+      icon: CalendarDays,
+      computed: true,
+    };
+  }
+
+  const raw = (user.customFields ?? {})[col.custom._id];
+  let value: string | null = raw ?? null;
+  if (raw) {
+    if (col.custom.type === "date") value = formatIsoFullDate(raw);
+    else if (col.custom.type === "number") value = formatNumberValue(raw);
+  }
+  return { token: col.token, label, value, icon: Info };
+}
+
+function InfoRow({
+  icon: Icon,
+  label,
+  value,
+  computed,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string | null;
+  computed?: boolean;
+}) {
+  return (
+    <div className={`flex items-start gap-3 ${!value ? "opacity-60" : ""}`}>
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+        <Icon className="size-4 text-muted-foreground" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          {label}
+          {computed ? (
+            <span className="rounded bg-muted px-1 py-0.5 text-[10px] font-medium text-muted-foreground">
+              Otomatis
+            </span>
+          ) : null}
+        </p>
+        <p className="truncate text-sm font-medium">{value ?? "—"}</p>
+      </div>
+    </div>
+  );
+}
+
+function ColleagueCard({
+  user,
+  onClick,
+}: {
+  user: { _id: string; name?: string; avatarUrl?: string; jobTitle?: string; department?: string };
+  onClick: () => void;
+}) {
+  const tone = COLOR_CLASSES[colorForDepartment(user.department)];
+  return (
+    <button
+      onClick={onClick}
+      className="flex w-full cursor-pointer items-center gap-3 rounded-lg border bg-background p-2.5 text-left transition-all hover:border-primary/40 hover:shadow-sm"
+    >
+      <Avatar className="size-9">
+        {user.avatarUrl ? (
+          <AvatarImage src={user.avatarUrl} alt={user.name ?? ""} />
+        ) : null}
+        <AvatarFallback className={`${tone.chip} text-xs font-semibold`}>
+          {getInitials(user.name)}
+        </AvatarFallback>
+      </Avatar>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{user.name ?? "Tanpa Nama"}</p>
+        <p className="truncate text-xs text-muted-foreground">{user.jobTitle ?? "—"}</p>
+      </div>
+    </button>
   );
 }

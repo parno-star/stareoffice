@@ -1,156 +1,137 @@
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import {
+  FileText,
+  IdCard,
+  Award,
+  Receipt,
+  Landmark,
+  HeartPulse,
+  FileStack,
+  Briefcase,
+} from "lucide-react";
 
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+export type EmployeeDocCategory =
+  | "contract"
+  | "id"
+  | "certificate"
+  | "payslip"
+  | "tax"
+  | "medical"
+  | "other";
+
+export type EmployeeDocCategoryConfig = {
+  label: string;
+  description: string;
+  icon: typeof FileText;
+  dot: string;
+  badge: string;
+  tint: string;
+};
+
+export const EMPLOYEE_DOC_CATEGORIES: Record<
+  EmployeeDocCategory,
+  EmployeeDocCategoryConfig
+> = {
+  contract: {
+    label: "Kontrak Kerja",
+    description: "Surat perjanjian, addendum, NDA",
+    icon: Briefcase,
+    dot: "bg-blue-500",
+    badge: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
+    tint: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  },
+  id: {
+    label: "Identitas",
+    description: "KTP, NPWP, paspor, SIM",
+    icon: IdCard,
+    dot: "bg-violet-500",
+    badge: "bg-violet-500/10 text-violet-700 dark:text-violet-300",
+    tint: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+  },
+  certificate: {
+    label: "Sertifikat",
+    description: "Pelatihan, pendidikan, penghargaan",
+    icon: Award,
+    dot: "bg-amber-500",
+    badge: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    tint: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  },
+  payslip: {
+    label: "Slip Gaji",
+    description: "Slip gaji bulanan, THR, bonus",
+    icon: Receipt,
+    dot: "bg-emerald-500",
+    badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+    tint: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  },
+  tax: {
+    label: "Pajak",
+    description: "SPT, bukti potong PPh21",
+    icon: Landmark,
+    dot: "bg-sky-500",
+    badge: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    tint: "bg-sky-500/10 text-sky-600 dark:text-sky-400",
+  },
+  medical: {
+    label: "Kesehatan",
+    description: "Surat dokter, MCU, asuransi",
+    icon: HeartPulse,
+    dot: "bg-rose-500",
+    badge: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
+    tint: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
+  },
+  other: {
+    label: "Lainnya",
+    description: "Dokumen pribadi lain",
+    icon: FileStack,
+    dot: "bg-slate-500",
+    badge: "bg-slate-500/10 text-slate-700 dark:text-slate-300",
+    tint: "bg-slate-500/10 text-slate-600 dark:text-slate-400",
+  },
+};
+
+export const MAX_UPLOAD_SIZE = 25 * 1024 * 1024; // 25 MB
+
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
-export function getLocalDateString(date: Date = new Date()): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+export function getCategoryConfig(
+  category: string,
+): EmployeeDocCategoryConfig {
+  if (category in EMPLOYEE_DOC_CATEGORIES) {
+    return EMPLOYEE_DOC_CATEGORIES[category as EmployeeDocCategory];
+  }
+  return EMPLOYEE_DOC_CATEGORIES.other;
 }
 
-export function formatClock(timeInput?: string | number | Date | null): string {
-  if (!timeInput) return "--:--";
-  const date = typeof timeInput === "object" ? timeInput : new Date(timeInput);
-  if (isNaN(date.getTime())) return "--:--";
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-}
-
-export function getMonthRange(date: Date = new Date()) {
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-
-  const formatDateStr = (d: Date) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
-  };
-
-  const monthNames = [
-    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-  ];
-
-  return {
-    start: formatDateStr(firstDay),
-    end: formatDateStr(lastDay),
-    label: `${monthNames[month]} ${year}`
-  };
-}
-
-export function formatMinutes(minutes?: number | null): string {
-  if (minutes == null || isNaN(minutes)) return "0j 0m";
-  const hours = Math.floor(minutes / 60);
-  const mins = Math.round(minutes % 60);
-  if (hours === 0) return `${mins}m`;
-  if (mins === 0) return `${hours}j`;
-  return `${hours}j ${mins}m`;
-}
-
-export function formatDateId(dateStr?: string | Date | null): string {
-  if (!dateStr) return "-";
-  const date = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
-  if (isNaN(date.getTime())) return String(dateStr);
-  const dayNames = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-  const monthNames = [
-    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-    "Jul", "Agu", "Sep", "Okt", "Nov", "Des"
-  ];
-  const dayName = dayNames[date.getDay()];
-  const day = date.getDate();
-  const monthName = monthNames[date.getMonth()];
-  const year = date.getFullYear();
-  return `${dayName}, ${day} ${monthName} ${year}`;
-}
-
-export const PROJECT_COLORS = [
-  { name: "blue", label: "Biru", bg: "bg-blue-500", text: "text-blue-500", ring: "ring-blue-500" },
-  { name: "emerald", label: "Hijau", bg: "bg-emerald-500", text: "text-emerald-500", ring: "ring-emerald-500" },
-  { name: "violet", label: "Ungu", bg: "bg-violet-500", text: "text-violet-500", ring: "ring-violet-500" },
-  { name: "amber", label: "Kuning", bg: "bg-amber-500", text: "text-amber-500", ring: "ring-amber-500" },
-  { name: "rose", label: "Merah", bg: "bg-rose-500", text: "text-rose-500", ring: "ring-rose-500" },
-  { name: "cyan", label: "Sian", bg: "bg-cyan-500", text: "text-cyan-500", ring: "ring-cyan-500" },
-];
-
-export function getProjectColor(colorName?: string) {
-  const found = PROJECT_COLORS.find((c) => c.name === colorName);
-  return found || PROJECT_COLORS[0];
-}
-
-export function getInitials(name?: string | null): string {
-  if (!name) return "?";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 0 || !parts[0]) return "?";
-  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
-export function formatDueDate(dateStr?: string | Date | null): string {
-  if (!dateStr) return "-";
-  const date = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
-  if (isNaN(date.getTime())) return String(dateStr);
-  return date.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
-}
-
-export function isOverdue(dueDate?: string | Date | null, status?: string): boolean {
-  if (!dueDate) return false;
-  if (status === "completed" || status === "done" || status === "closed") return false;
-  const date = typeof dueDate === "string" ? new Date(dueDate) : dueDate;
-  if (isNaN(date.getTime())) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return date < today;
-}
-
-export function formatFileSize(bytes?: number | null): string {
-  if (bytes == null || isNaN(bytes) || bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
-}
-
-export function formatIsoDate(dateStr?: string | Date | null): string {
-  if (!dateStr) return "-";
-  const date = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
-  if (isNaN(date.getTime())) return String(dateStr);
-  return date.toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "long",
+export function formatIsoDate(date: string | undefined): string {
+  if (!date) return "-";
+  const [y, m, d] = date.split("-").map((v) => parseInt(v, 10));
+  if (!y || !m || !d) return date;
+  return new Date(y, m - 1, d).toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "short",
     year: "numeric",
   });
 }
 
-export function getExpiryStatus(expiryDate?: string | Date | null): "ok" | "soon" | "expired" | "none" {
-  if (!expiryDate) return "none";
-  const date = typeof expiryDate === "string" ? new Date(expiryDate) : expiryDate;
-  if (isNaN(date.getTime())) return "none";
+export type ExpiryStatus = "none" | "ok" | "soon" | "expired";
+
+export function getExpiryStatus(expiry: string | undefined): ExpiryStatus {
+  if (!expiry) return "none";
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  if (date < today) return "expired";
-  const thirtyDaysFromNow = new Date();
-  thirtyDaysFromNow.setDate(today.getDate() + 30);
-  if (date <= thirtyDaysFromNow) return "soon";
+  const in30 = new Date(today);
+  in30.setDate(today.getDate() + 30);
+  const [y, m, d] = expiry.split("-").map((v) => parseInt(v, 10));
+  if (!y || !m || !d) return "none";
+  const exp = new Date(y, m - 1, d);
+  exp.setHours(0, 0, 0, 0);
+  if (exp.getTime() < today.getTime()) return "expired";
+  if (exp.getTime() <= in30.getTime()) return "soon";
   return "ok";
-}
-
-import { FileText, FileCheck, Shield, Award, Folder } from "lucide-react";
-
-export function getCategoryConfig(category: string) {
-  switch (category) {
-    case "sk_kontrak":
-      return { label: "SK & Kontrak Kerja", icon: FileCheck, tint: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300" };
-    case "identitas":
-      return { label: "Dokumen Identitas", icon: Shield, tint: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" };
-    case "sertifikat":
-      return { label: "Sertifikat & Pelatihan", icon: Award, tint: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" };
-    default:
-      return { label: category || "Lainnya", icon: Folder, tint: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" };
-  }
 }

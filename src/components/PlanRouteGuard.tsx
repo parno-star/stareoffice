@@ -46,7 +46,7 @@ export default function PlanRouteGuard({ children }: { children: React.ReactNode
   );
 
   // No mapped menu, still loading, or not blocked → render normally.
-  if (!menuKey || result === undefined || !result.blocked) {
+  if (!menuKey || result === undefined || !result?.blocked) {
     return <>{children}</>;
   }
 
@@ -59,7 +59,7 @@ export default function PlanRouteGuard({ children }: { children: React.ReactNode
           </EmptyMedia>
           <EmptyTitle>Fitur Tidak Tersedia</EmptyTitle>
           <EmptyDescription>
-            {result.upgradeMessage ??
+            {result?.upgradeMessage ??
               "Fitur ini tidak termasuk dalam paket keanggotaan Anda."}
           </EmptyDescription>
         </EmptyHeader>

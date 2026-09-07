@@ -1,194 +1,310 @@
-import React from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
+import { isAdminRole } from "@/convex/roles.ts";
+import { Card, CardContent } from "@/components/ui/card.tsx";
+import { Button } from "@/components/ui/button.tsx";
+import { Skeleton } from "@/components/ui/skeleton.tsx";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog.tsx";
 import {
   ArrowLeft,
-  Calendar as CalendarIcon,
+  Calendar,
   Clock,
   MapPin,
+  Pencil,
+  Trash2,
   User,
   Users,
-  Trash2,
-  Share2,
-  Building,
 } from "lucide-react";
-import { Button } from "@/components/ui/button.tsx";
-import { Badge } from "@/components/ui/badge.tsx";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
+import { format, parseISO } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils.ts";
-import { getCategoryConfig } from "@/lib/calendar-utils.ts";
-import RsvpButtons from "@/components/RsvpButtons.tsx";
-import AttendeesList from "@/components/AttendeesList.tsx";
+import { ConvexError } from "convex/values";
 import type { Id } from "@/convex/_generated/dataModel.d.ts";
+import { getCategoryConfig } from "./_lib/calendar-utils.ts";
+import RsvpButtons from "./_components/RsvpButtons.tsx";
+import AttendeesList from "./_components/AttendeesList.tsx";
+import CreateEventDialog from "./_components/CreateEventDialog.tsx";
+
+function formatDate(iso: string): string {
+  try {
+    return format(parseISO(iso), "EEEE, d MMMM yyyy", { locale: idLocale });
+  } catch {
+    return iso;
+  }
+}
 
 export default function EventDetailPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
+  const [editOpen, setEditOpen] = useState(false);
 
-  // Try fetching from Convex if valid Id
-  const convexEvent = useQuery(
+  const currentUser = useQuery(api.users.getCurrentUser, {});
+  const event = useQuery(
     api.events.getById,
-    eventId && eventId.length > 5 ? { id: eventId as Id<"events"> } : "skip"
+    eventId ? { id: eventId as Id<"events"> } : "skip",
   );
+  const remove = useMutation(api.events.remove);
 
-  const removeMutation = useMutation(api.events.remove);
+  if (event === undefined) {
+    return (
+      <div className="mx-auto max-w-5xl space-y-4 p-4 lg:p-6">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
 
-  // Fallback mock if not found in DB
-  const mockEvent = {
-    _id: eventId ?? "ev_1",
-    title: "Rapat Koordinasi Tim & Project Sync",
-    category: "meeting",
-    scope: "company",
-    startDate: "2026-08-10",
-    endDate: "2026-08-10",
-    allDay: false,
-    startTime: "09:00",
-    endTime: "10:30",
-    location: "Ruang Rapat Utama Lt. 2 & Google Meet",
-    description: "Evaluasi progress mingguan pencapaian KPI dan pembahasan strategi sprint selanjutnya.",
-    authorName: "Budi Santoso",
-    goingCount: 8,
-    maybeCount: 2,
-    notGoingCount: 0,
-    myRsvp: "going" as const,
-  };
+  if (event === null) {
+    return (
+      <div className="mx-auto max-w-5xl space-y-4 p-4 lg:p-6">
+        <Button variant="ghost" onClick={() => navigate("/calendar")}>
+          <ArrowLeft className="size-4" />
+          Kembali ke kalender
+        </Button>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">
+              Acara tidak ditemukan atau telah dihapus.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-  const event = convexEvent ?? mockEvent;
   const cfg = getCategoryConfig(event.category);
+  const canManage =
+    !!currentUser &&
+    (isAdminRole(currentUser.role) || event.authorId === currentUser._id);
 
   const handleDelete = async () => {
     try {
-      if (eventId && eventId.length > 5) {
-        await removeMutation({ id: eventId as Id<"events"> });
-      }
-      toast.success("Event berhasil dihapus");
+      await remove({ id: event._id });
+      toast.success("Acara dihapus");
       navigate("/calendar");
-    } catch {
-      toast.error("Gagal menghapus event");
+    } catch (error) {
+      if (error instanceof ConvexError) {
+        const data = error.data as { message?: string };
+        toast.error(data.message ?? "Gagal menghapus");
+      } else {
+        toast.error("Gagal menghapus");
+      }
     }
   };
 
   return (
-    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
-      {/* Top Navigation */}
-      <button
-        type="button"
-        onClick={() => navigate("/calendar")}
-        className="inline-flex items-center text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-      >
-        <ArrowLeft className="size-3.5 mr-1" />
-        Kembali ke Kalender
-      </button>
-
-      {/* Main Header Card */}
-      <Card className="rounded-2xl border overflow-hidden">
-        <div className={cn("px-6 py-4 border-b flex items-center justify-between", cfg.bg)}>
-          <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold", cfg.bg, cfg.text)}>
-            <span className={cn("size-2 rounded-full", cfg.dot)} />
-            {cfg.label}
-          </span>
-
+    <div className="mx-auto max-w-5xl space-y-6 p-4 lg:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Button variant="ghost" asChild>
+          <Link to="/calendar">
+            <ArrowLeft className="size-4" />
+            Kembali ke kalender
+          </Link>
+        </Button>
+        {canManage ? (
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                navigator.clipboard.writeText(window.location.href);
-                toast.success("Tautan event berhasil disalin");
-              }}
-              className="h-8 gap-1.5 text-xs bg-background cursor-pointer"
+              variant="secondary"
+              onClick={() => setEditOpen(true)}
+              className="gap-2"
             >
-              <Share2 className="size-3.5" />
-              <span>Bagikan</span>
+              <Pencil className="size-4" />
+              Ubah
             </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDelete}
-              className="h-8 text-xs text-destructive hover:bg-destructive/10 cursor-pointer"
-            >
-              <Trash2 className="size-3.5 mr-1" />
-              <span>Hapus</span>
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="gap-2">
+                  <Trash2 className="size-4" />
+                  Hapus
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Hapus acara?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {`Acara "${event.title}" akan dihapus permanen.`}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Batal</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete}>
+                    Hapus
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
+        ) : null}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <Card
+            className={`border-l-4 ${cfg.border.replace("border-", "border-l-")}`}
+          >
+            <CardContent className="space-y-4">
+              <div>
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${cfg.bg} ${cfg.text}`}
+                >
+                  <span className={`size-1.5 rounded-full ${cfg.dot}`} />
+                  {cfg.label}
+                </span>
+                <h1 className="mt-2 text-2xl font-bold tracking-tight">
+                  {event.title}
+                </h1>
+              </div>
+
+              <div className="grid gap-3 text-sm text-foreground/90 sm:grid-cols-2">
+                <div className="flex items-start gap-2">
+                  <Calendar className="size-4 shrink-0 translate-y-0.5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Tanggal
+                    </p>
+                    <p className="capitalize">
+                      {formatDate(event.startDate)}
+                      {event.endDate !== event.startDate
+                        ? ` – ${formatDate(event.endDate)}`
+                        : ""}
+                    </p>
+                  </div>
+                </div>
+
+                {!event.allDay && event.startTime ? (
+                  <div className="flex items-start gap-2">
+                    <Clock className="size-4 shrink-0 translate-y-0.5 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Waktu
+                      </p>
+                      <p>
+                        {event.startTime}
+                        {event.endTime ? ` – ${event.endTime}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                ) : event.allDay ? (
+                  <div className="flex items-start gap-2">
+                    <Clock className="size-4 shrink-0 translate-y-0.5 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Waktu
+                      </p>
+                      <p>Sepanjang hari</p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {event.location ? (
+                  <div className="flex items-start gap-2">
+                    <MapPin className="size-4 shrink-0 translate-y-0.5 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Lokasi
+                      </p>
+                      <p>{event.location}</p>
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="flex items-start gap-2">
+                  <User className="size-4 shrink-0 translate-y-0.5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Dibuat oleh
+                    </p>
+                    <p>{event.authorName}</p>
+                  </div>
+                </div>
+              </div>
+
+              {event.description ? (
+                <div>
+                  <p className="mb-1 text-xs font-medium text-muted-foreground">
+                    Deskripsi
+                  </p>
+                  <p className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-sm leading-relaxed text-foreground/90">
+                    {event.description}
+                  </p>
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Users className="size-4 text-muted-foreground" />
+                <h2 className="font-semibold">Konfirmasi Kehadiran Anda</h2>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Bantu panitia mengetahui siapa saja yang akan hadir.
+              </p>
+              <RsvpButtons
+                eventId={event._id}
+                current={event.myRsvp}
+                size="default"
+              />
+              <div className="grid grid-cols-3 gap-2 pt-2 text-center text-sm">
+                <div className="rounded-lg border bg-emerald-500/10 p-2">
+                  <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                    {event.goingCount}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Hadir</p>
+                </div>
+                <div className="rounded-lg border bg-amber-500/10 p-2">
+                  <p className="text-xl font-bold text-amber-600 dark:text-amber-400">
+                    {event.maybeCount}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Mungkin</p>
+                </div>
+                <div className="rounded-lg border bg-rose-500/10 p-2">
+                  <p className="text-xl font-bold text-rose-600 dark:text-rose-400">
+                    {event.notGoingCount}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Tidak</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <CardContent className="p-6 space-y-6">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground">
-              {event.title}
-            </h1>
-            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-              Dibuat oleh <span className="font-semibold text-foreground">{event.authorName}</span>
-            </p>
-          </div>
+        <div className="space-y-4">
+          <AttendeesList eventId={event._id} />
+        </div>
+      </div>
 
-          {/* Details Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-muted/40 p-4 rounded-xl border">
-            <div className="flex items-center gap-3">
-              <div className="size-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <CalendarIcon className="size-4" />
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold text-muted-foreground">Tanggal Event</p>
-                <p className="text-xs font-bold text-foreground">{event.startDate}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="size-9 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center shrink-0">
-                <Clock className="size-4" />
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold text-muted-foreground">Waktu</p>
-                <p className="text-xs font-bold text-foreground">
-                  {event.allDay ? "Seharian" : `${event.startTime || ""} - ${event.endTime || ""}`}
-                </p>
-              </div>
-            </div>
-
-            {event.location && (
-              <div className="flex items-center gap-3 sm:col-span-2">
-                <div className="size-9 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center shrink-0">
-                  <MapPin className="size-4" />
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold text-muted-foreground">Lokasi / Tempat</p>
-                  <p className="text-xs font-bold text-foreground">{event.location}</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Description */}
-          {event.description && (
-            <div className="space-y-1.5">
-              <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
-                Deskripsi Event
-              </h3>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-                {event.description}
-              </p>
-            </div>
-          )}
-
-          {/* RSVP Section */}
-          <div className="border-t pt-4 space-y-2">
-            <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
-              Konfirmasi Kehadiran Anda
-            </h3>
-            <RsvpButtons eventId={event._id as any} current={event.myRsvp as any} size="default" />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Attendees List */}
-      {eventId && eventId.length > 5 && (
-        <AttendeesList eventId={eventId as Id<"events">} />
-      )}
+      {canManage ? (
+        <CreateEventDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          editValues={{
+            id: event._id,
+            title: event.title,
+            category: event.category,
+            description: event.description ?? undefined,
+            startDate: event.startDate,
+            endDate: event.endDate,
+            allDay: event.allDay,
+            startTime: event.startTime ?? undefined,
+            endTime: event.endTime ?? undefined,
+            location: event.location ?? undefined,
+          }}
+        />
+      ) : null}
     </div>
   );
 }

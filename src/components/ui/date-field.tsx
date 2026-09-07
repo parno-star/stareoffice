@@ -206,153 +206,146 @@ function CalendarDropdown({ value, options, onChange }: DropdownProps) {
   );
 }
 
-export const DateField = React.forwardRef<HTMLInputElement, DateFieldProps>(
-  (
-    {
-      value,
-      onChange,
-      placeholder = "dd/mm/yyyy",
-      fromYear = 1940,
-      toYear = new Date().getFullYear() + 5,
-      disabled,
-      className,
-      id,
-      min,
-      max,
-    },
-    ref,
-  ) => {
-    const [open, setOpen] = React.useState(false);
-    const [text, setText] = React.useState(isoToDisplay(value));
-    // Controlled calendar month so it can follow the text as the user types.
-    const [month, setMonth] = React.useState<Date>(
-      isoToDate(value) ?? new Date(2000, 0),
-    );
-    const internalInputRef = React.useRef<HTMLInputElement>(null);
-    const inputRef = (ref as React.RefObject<HTMLInputElement>) || internalInputRef;
+export function DateField({
+  value,
+  onChange,
+  placeholder = "dd/mm/yyyy",
+  fromYear = 1940,
+  toYear = new Date().getFullYear() + 5,
+  disabled,
+  className,
+  id,
+  min,
+  max,
+}: DateFieldProps) {
+  const [open, setOpen] = React.useState(false);
+  const [text, setText] = React.useState(isoToDisplay(value));
+  // Controlled calendar month so it can follow the text as the user types.
+  const [month, setMonth] = React.useState<Date>(
+    isoToDate(value) ?? new Date(2000, 0),
+  );
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
-    // Keep the visible text in sync when the value changes from outside.
-    React.useEffect(() => {
+  // Keep the visible text in sync when the value changes from outside.
+  React.useEffect(() => {
+    setText(isoToDisplay(value));
+    const d = isoToDate(value);
+    if (d) setMonth(d);
+  }, [value]);
+
+  const selectedDate = isoToDate(value);
+  const minDate = isoToDate(min);
+  const maxDate = isoToDate(max);
+  const disabledMatcher = [
+    ...(minDate ? [{ before: minDate }] : []),
+    ...(maxDate ? [{ after: maxDate }] : []),
+  ];
+
+  const commitText = (raw: string) => {
+    const trimmed = raw.trim();
+    if (trimmed === "") {
+      onChange("");
+      return;
+    }
+    const iso = displayToIso(trimmed);
+    if (iso) {
+      onChange(iso);
+    } else {
+      // Revert to the last valid value on invalid input.
       setText(isoToDisplay(value));
-      const d = isoToDate(value);
-      if (d) setMonth(d);
-    }, [value]);
+    }
+  };
 
-    const selectedDate = isoToDate(value);
-    const minDate = isoToDate(min);
-    const maxDate = isoToDate(max);
-    const disabledMatcher = [
-      ...(minDate ? [{ before: minDate }] : []),
-      ...(maxDate ? [{ after: maxDate }] : []),
-    ];
+  const handleTextChange = (raw: string) => {
+    setText(raw);
+    // Open the calendar and move it to follow the digits being typed.
+    if (!open && raw.trim() !== "") setOpen(true);
+    const followMonth = partialToMonth(raw);
+    if (followMonth) setMonth(followMonth);
+  };
 
-    const commitText = (raw: string) => {
-      const trimmed = raw.trim();
-      if (trimmed === "") {
-        onChange("");
-        return;
-      }
-      const iso = displayToIso(trimmed);
-      if (iso) {
-        onChange(iso);
-      } else {
-        // Revert to the last valid value on invalid input.
-        setText(isoToDisplay(value));
-      }
-    };
-
-    const handleTextChange = (raw: string) => {
-      setText(raw);
-      // Open the calendar and move it to follow the digits being typed.
-      if (!open && raw.trim() !== "") setOpen(true);
-      const followMonth = partialToMonth(raw);
-      if (followMonth) setMonth(followMonth);
-    };
-
-    return (
-      <div className={cn("relative", className)}>
-        <Input
-          ref={inputRef}
-          id={id}
-          value={text}
-          disabled={disabled}
-          placeholder={placeholder}
-          inputMode="numeric"
-          onChange={(e) => handleTextChange(e.target.value)}
-          onFocus={() => {
-            if (!disabled) setOpen(true);
-          }}
-          onBlur={(e) => commitText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              commitText(text);
-              setOpen(false);
-            }
-            if (e.key === "Escape") {
-              setOpen(false);
-            }
-          }}
-          className="pr-10"
-        />
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              disabled={disabled}
-              onClick={() => setOpen((v) => !v)}
-              className="absolute right-1 top-1/2 size-7 -translate-y-1/2 text-muted-foreground"
-              aria-label="Buka kalender"
-            >
-              <CalendarIcon className="size-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="w-auto p-0"
-            align="end"
-            // Keep typing focus in the input while the calendar follows along.
-            onOpenAutoFocus={(e) => e.preventDefault()}
-            onInteractOutside={(e) => {
-              const target = e.target as Node;
-              // Don't close when interacting with our own text input, or when the
-              // nested month/year dropdown (rendered in a portal) is clicked.
-              if (
-                inputRef.current?.contains(target) ||
-                (target instanceof Element &&
-                  target.closest("[data-calendar-dropdown]"))
-              ) {
-                e.preventDefault();
-              }
-            }}
+  return (
+    <div className={cn("relative", className)}>
+      <Input
+        ref={inputRef}
+        id={id}
+        value={text}
+        disabled={disabled}
+        placeholder={placeholder}
+        inputMode="numeric"
+        onChange={(e) => handleTextChange(e.target.value)}
+        onFocus={() => {
+          if (!disabled) setOpen(true);
+        }}
+        onBlur={(e) => commitText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commitText(text);
+            setOpen(false);
+          }
+          if (e.key === "Escape") {
+            setOpen(false);
+          }
+        }}
+        className="pr-10"
+      />
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            disabled={disabled}
+            onClick={() => setOpen((v) => !v)}
+            className="absolute right-1 top-1/2 size-7 -translate-y-1/2 text-muted-foreground"
+            aria-label="Buka kalender"
           >
-            <Calendar
-              mode="single"
-              captionLayout="dropdown"
-              locale={idLocale}
-              startMonth={new Date(fromYear, 0)}
-              endMonth={new Date(toYear, 11)}
-              month={month}
-              onMonthChange={setMonth}
-              selected={selectedDate}
-              disabled={disabledMatcher.length > 0 ? disabledMatcher : undefined}
-              components={{ Dropdown: CalendarDropdown }}
-              onSelect={(date) => {
-                if (date) {
-                  onChange(dateToIso(date));
-                  setText(isoToDisplay(dateToIso(date)));
-                  setMonth(date);
-                }
-                setOpen(false);
-              }}
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-    );
-  },
-);
-DateField.displayName = "DateField";
+            <CalendarIcon className="size-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-auto p-0"
+          align="end"
+          // Keep typing focus in the input while the calendar follows along.
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onInteractOutside={(e) => {
+            const target = e.target as Node;
+            // Don't close when interacting with our own text input, or when the
+            // nested month/year dropdown (rendered in a portal) is clicked.
+            if (
+              inputRef.current?.contains(target) ||
+              (target instanceof Element &&
+                target.closest("[data-calendar-dropdown]"))
+            ) {
+              e.preventDefault();
+            }
+          }}
+        >
+          <Calendar
+            mode="single"
+            captionLayout="dropdown"
+            locale={idLocale}
+            startMonth={new Date(fromYear, 0)}
+            endMonth={new Date(toYear, 11)}
+            month={month}
+            onMonthChange={setMonth}
+            selected={selectedDate}
+            disabled={disabledMatcher.length > 0 ? disabledMatcher : undefined}
+            components={{ Dropdown: CalendarDropdown }}
+            onSelect={(date) => {
+              if (date) {
+                onChange(dateToIso(date));
+                setText(isoToDisplay(dateToIso(date)));
+                setMonth(date);
+              }
+              setOpen(false);
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
 
 export default DateField;

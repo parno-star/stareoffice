@@ -10,6 +10,11 @@ function Progress({
 }: React.ComponentProps<typeof ProgressPrimitive.Root> & {
   indicatorClassName?: string;
 }) {
+  const safeValue =
+    typeof value === "number" && !Number.isNaN(value)
+      ? Math.min(100, Math.max(0, value))
+      : 0;
+
   return (
     <ProgressPrimitive.Root
       data-slot="progress"
@@ -17,6 +22,7 @@ function Progress({
         "bg-primary/20 relative h-2 w-full overflow-hidden rounded-full",
         className,
       )}
+      value={safeValue}
       {...props}
     >
       <ProgressPrimitive.Indicator
@@ -25,7 +31,7 @@ function Progress({
           "bg-primary h-full w-full flex-1 transition-all",
           indicatorClassName,
         )}
-        style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+        style={{ transform: `translateX(-${100 - safeValue}%)` }}
       />
     </ProgressPrimitive.Root>
   );

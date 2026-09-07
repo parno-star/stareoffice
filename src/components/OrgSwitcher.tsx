@@ -71,19 +71,7 @@ export default function OrgSwitcher() {
   const handleLeave = async () => {
     setSwitching("all");
     try {
-      // Race the mutation against an 800ms timeout so offline/mock mode doesn't hang forever
-      await Promise.race([
-        setViewing({ organizationId: null }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 800))
-      ]).catch(err => {
-        if (err instanceof Error && err.message === "timeout") {
-          console.warn("setViewingOrganization timed out, proceeding anyway (mock/offline mode fallback)");
-          localStorage.setItem("mock_viewing_org_id", "null");
-        } else {
-          throw err;
-        }
-      });
-
+      await setViewing({ organizationId: null });
       setOpen(false);
       setSearch("");
       window.location.reload();
@@ -120,9 +108,10 @@ export default function OrgSwitcher() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id="header-org-switcher-button"
           variant="ghost"
           size="sm"
-          className="h-9 gap-2 border bg-muted/40 px-2.5 text-sm font-medium hover:bg-muted cursor-pointer max-w-[190px]"
+          className="h-9 gap-2 border bg-muted/40 px-2.5 text-sm font-medium hover:bg-muted cursor-pointer max-w-[210px] sm:max-w-[240px]"
         >
           {showCompanyIcon ? (
             <Building2 className="size-4 shrink-0 text-primary" />

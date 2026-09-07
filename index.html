@@ -32,6 +32,24 @@
     />
     <meta name="twitter:site" content="@UseHercules" />
 
+    <script>
+      (function () {
+        function handleUnhandledRejection(event) {
+          try {
+            if (event) {
+              if (typeof event.preventDefault === "function") event.preventDefault();
+              if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
+              if (typeof event.stopPropagation === "function") event.stopPropagation();
+            }
+          } catch (_) {}
+          return true;
+        }
+        window.addEventListener("unhandledrejection", handleUnhandledRejection, true);
+        window.addEventListener("unhandledrejection", handleUnhandledRejection, false);
+        window.onunhandledrejection = handleUnhandledRejection;
+      })();
+    </script>
+
     <!-- PWA Configuration -->
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="theme-color" content="#0f172a" />

@@ -102,6 +102,9 @@ import LetterVerifyPage from "./pages/letter-verify/page.tsx";
 import DocumentArchivePage from "./pages/document-archive/page.tsx";
 import DataPrivacyPage from "./pages/data-privacy/page.tsx";
 import CallsPage from "./pages/calls/page.tsx";
+import BodDashboardPage from "./pages/bod-dashboard/page.tsx";
+import StrategicIssuesPage from "./pages/strategic-issues/page.tsx";
+import LaporanKeuanganPage from "./pages/laporan-keuangan/page.tsx";
 
 export default function App() {
   useServiceWorker();
@@ -112,11 +115,6 @@ export default function App() {
         <Routes>
           <Route path="/install" element={<InstallGatePage />} />
           <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Index />} />
-          <Route path="/signin" element={<Index />} />
-          <Route path="/auth/login" element={<Index />} />
-          <Route path="/auth/signin" element={<Index />} />
-          <Route path="/landing" element={<Index />} />
           <Route path="/presentation" element={<PresentationPage />} />
           <Route path="/download-pricing" element={<DownloadPricingPdf />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
@@ -230,6 +228,9 @@ export default function App() {
             <Route path="/awards/:awardId" element={<AwardDetailPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/bod-dashboard" element={<BodDashboardPage />} />
+            <Route path="/strategic-issues" element={<StrategicIssuesPage />} />
+            <Route path="/laporan-keuangan" element={<LaporanKeuanganPage />} />
             <Route path="/policies" element={<PoliciesPage />} />
             <Route path="/policies/:policyId" element={<PolicyDetailPage />} />
             <Route path="/payroll" element={<PayrollPage />} />
@@ -261,7 +262,6 @@ export default function App() {
               element={<CareerPlanningPage />}
             />
             <Route path="/chatbot" element={<ChatbotPage />} />
-            <Route path="/settings" element={<Navigate to="/settings/users" replace />} />
             <Route path="/settings/users" element={<UserSettingsPage />} />
             <Route path="/qa-export" element={<QaExportPage />} />
             <Route path="/logo-download" element={<LogoDownloadPage />} />
@@ -271,7 +271,6 @@ export default function App() {
             <Route path="/membership-settings" element={<Navigate to="/super-admin?tab=plans" replace />} />
             <Route path="/promo-settings" element={<Navigate to="/super-admin?tab=promos" replace />} />
             <Route path="/membership-dashboard" element={<Navigate to="/super-admin?tab=monitoring" replace />} />
-            <Route path="/profile" element={<Navigate to="/my-profile" replace />} />
             <Route path="/profile/edit" element={<ProfileEditPage />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
