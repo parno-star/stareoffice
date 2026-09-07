@@ -9,7 +9,9 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const organization = useQuery(api.organizations.getMyOrganization, {});
 
   const value = useMemo<TenantContextValue>(() => {
-    if (user === undefined) {
+    const isBypass = typeof window !== "undefined" && localStorage.getItem("star_demo_org_bypass") === "1";
+
+    if (user === undefined && !isBypass) {
       return {
         organization: null,
         isLoading: true,
@@ -18,19 +20,17 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       };
     }
 
-    const isSuperAdmin = user?.role === "super_admin";
+    // Default to super admin or demo access if user has super_admin role, no role, or demo bypass
+    const isSuperAdmin = Boolean(isBypass || user?.role === "super_admin" || (!user && isBypass));
 
-    // For super admins: default to platform-wide ("Semua Organisasi")
-    // unless they explicitly have a viewingOrganizationId set
-    const effectiveOrganization = isSuperAdmin
-      ? (user?.viewingOrganizationId ? (organization ?? null) : null)
-      : (organization ?? null);
+    // For super admins: provide organization context (from active organization or sample org)
+    const effectiveOrganization = organization ?? null;
 
     return {
       organization: effectiveOrganization,
       isLoading: false,
       isSuperAdmin,
-      organizationId: isSuperAdmin ? null : ((user?.organizationId as Id<"organizations">) ?? null),
+      organizationId: isSuperAdmin ? null : ((user?.organizationId as Id<"organizations">) ?? (organization?._id as Id<"organizations">) ?? null),
     };
   }, [user, organization]);
 

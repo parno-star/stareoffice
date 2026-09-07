@@ -15,7 +15,7 @@ export const createPool = () => {
       password: process.env.SQL_PASSWORD || "",
       database: process.env.SQL_DB_NAME || "postgres",
       max: 10,
-      connectionTimeoutMillis: 15000,
+      connectionTimeoutMillis: 2000,
     });
 
     global._postgresPool.on("error", (err) => {
